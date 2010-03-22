@@ -12,6 +12,10 @@ class Relationship(models.Model):
     class Meta:
         unique_together = (('from_user', 'to_user', 'status'),)
 
+    def __unicode__(self):
+        return 'Relationship from %s to %s' % (from_user.username,
+                                               to_user.username)
+
 field = models.ManyToManyField(User, through=Relationship, 
                                symmetrical=False, related_name='related_to')
 
