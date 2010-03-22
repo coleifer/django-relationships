@@ -1,8 +1,8 @@
-=============
-django-github
-=============
+====================
+django-relationships
+====================
 
-Simple django integration with GitHub's v2 API.
+Descriptive relationships between auth.users
 
 Installation
 ------------
@@ -11,4 +11,4 @@ Installation
 
 OR
 
-put the ``github`` folder on your python-path
+put the ``relationships`` folder on your python-path
