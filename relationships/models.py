@@ -32,13 +32,13 @@ class UserRelationships(object):
     
     def get_relationships(self, status):
         return self.relationships.filter(
-            to_user__status=status, 
-            to_user__from_user=self)
+            to_users__status=status, 
+            to_users__from_user=self)
     
     def get_related_to(self, status):
         return self.related_to.filter(
-            from_user__status=status, 
-            from_user__to_user=self)
+            from_users__status=status, 
+            from_users__to_user=self)
     
     def get_following(self):
         return self.get_relationships(RELATIONSHIP_FOLLOWING)
@@ -48,10 +48,10 @@ class UserRelationships(object):
     
     def get_friends(self):
         return self.relationships.filter(
-            to_user__status=RELATIONSHIP_FOLLOWING, 
-            to_user__from_user=self,
-            from_user__status=RELATIONSHIP_FOLLOWING, 
-            from_user__to_user=self)
+            to_users__status=RELATIONSHIP_FOLLOWING, 
+            to_users__from_user=self,
+            from_users__status=RELATIONSHIP_FOLLOWING, 
+            from_users__to_user=self)
 
 #HACK
 field.contribute_to_class(User, 'relationships')
