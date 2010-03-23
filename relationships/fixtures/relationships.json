@@ -1,0 +1,114 @@
+[
+  {
+    "pk": 1, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "The Walrus", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": true, 
+      "is_staff": true, 
+      "last_login": "2010-03-21 23:27:29", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "", 
+      "date_joined": "2010-03-21 23:07:49"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "John", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2010-03-21 23:08:22", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "", 
+      "date_joined": "2010-03-21 23:08:22"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "Paul", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2010-03-21 23:08:28", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "", 
+      "date_joined": "2010-03-21 23:08:28"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "auth.user", 
+    "fields": {
+      "username": "Yoko", 
+      "first_name": "", 
+      "last_name": "", 
+      "is_active": true, 
+      "is_superuser": false, 
+      "is_staff": false, 
+      "last_login": "2010-03-21 23:08:36", 
+      "groups": [], 
+      "user_permissions": [], 
+      "password": "!", 
+      "email": "", 
+      "date_joined": "2010-03-21 23:08:36"
+    }
+  },
+  {
+    "pk": 1, 
+    "model": "relationships.relationship", 
+    "fields": {
+      "to_user": 3, 
+      "status": 1, 
+      "created": "2010-03-21 23:08:42", 
+      "from_user": 2
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "relationships.relationship", 
+    "fields": {
+      "to_user": 4, 
+      "status": 1, 
+      "created": "2010-03-21 23:08:51", 
+      "from_user": 2
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "relationships.relationship", 
+    "fields": {
+      "to_user": 2, 
+      "status": 1, 
+      "created": "2010-03-21 23:08:54", 
+      "from_user": 4
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "relationships.relationship", 
+    "fields": {
+      "to_user": 2, 
+      "status": 2, 
+      "created": "2010-03-21 23:08:55", 
+      "from_user": 3
+    }
+  }
+]
