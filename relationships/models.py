@@ -61,6 +61,13 @@ class RelationshipManager(User._default_manager.__class__):
     def blockers(self):
         return self.get_related_to(RELATIONSHIP_BLOCKING)
 
+    def exists(self, user, status=None):
+        query = {'to_users__from_user': self.instance,
+                 'to_users__to_user': user}
+        if status:
+            query['to_users__status'] = status
+        return User.objects.filter(**query).count() != 0
+
     def friends(self):
         return User.objects.filter(
             to_users__status=RELATIONSHIP_FOLLOWING, 

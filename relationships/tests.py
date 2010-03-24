@@ -37,14 +37,26 @@ class RelationshipsTestCase(TestCase):
         self.assertEquals(list(rel), [self.john])
     
     def test_inherited_manager_methods(self):
+        # does filter work?
         rel = self.john.relationships.filter(username='Paul')
         self.assertEquals(list(rel), [self.paul])
         
+        # does filter work?
         rel = self.walrus.relationships.filter(username='Paul')
         self.assertEquals(list(rel), [])
         
+        # does exclude work?
         rel = self.john.relationships.exclude(username='Paul')
         self.assertEquals(list(rel), [self.yoko])
+
+        # does clear work?
+        self.john.relationships.clear()
+        rel = self.john.relationships.all()
+        self.assertEquals(list(rel), [])
+
+        # make sure yoko's relationship to john is still there
+        rel = self.yoko.relationships.all()
+        self.assertEquals(list(rel), [self.john])
     
     def test_add_method(self):
         _ = self.john.relationships.add(self.walrus)
@@ -116,3 +128,29 @@ class RelationshipsTestCase(TestCase):
         
         rel = self.paul.relationships.friends()
         self.assertEquals(list(rel), [])
+
+        # test exists() method
+        # these tests are going to be exhaustive as I hope to have a cleaner
+        # implementation of exists() soon that will fix the queryset chaining
+        self.assertTrue(self.john.relationships.exists(self.yoko))
+        self.assertTrue(self.john.relationships.exists(self.paul))
+        self.assertTrue(self.yoko.relationships.exists(self.john))
+        self.assertTrue(self.paul.relationships.exists(self.john))
+
+        self.assertFalse(self.john.relationships.exists(self.walrus))
+        self.assertFalse(self.walrus.relationships.exists(self.john))
+        self.assertFalse(self.paul.relationships.exists(self.yoko))
+        self.assertFalse(self.yoko.relationships.exists(self.paul))
+        
+        self.assertTrue(self.john.relationships.exists(self.yoko, 1))
+        self.assertTrue(self.john.relationships.exists(self.paul, 1))
+        self.assertTrue(self.yoko.relationships.exists(self.john, 1))
+        self.assertTrue(self.paul.relationships.exists(self.john, 2))
+        
+        self.assertFalse(self.john.relationships.exists(self.yoko, 2))
+        self.assertFalse(self.john.relationships.exists(self.paul, 2))
+        self.assertFalse(self.john.relationships.exists(self.walrus, 1))
+
+        self.assertFalse(self.paul.relationships.exists(self.yoko, 2))
+        self.assertFalse(self.paul.relationships.exists(self.john, 1))
+        self.assertFalse(self.paul.relationships.exists(self.walrus, 1))
