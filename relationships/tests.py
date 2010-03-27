@@ -226,3 +226,6 @@ class RelationshipsViewsTestCase(TestCase):
         resp = self.client.post('/relationships/remove/The_Walrus/following/')
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(self.john.relationships.exists(self.walrus, 1))
+        
+        resp = self.client.post('/relationships/add/Nobody/following/')
+        self.assertEqual(resp.status_code, 404)
