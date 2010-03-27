@@ -97,11 +97,10 @@ class RelationshipManager(User._default_manager.__class__):
         return User.objects.filter(**query).count() != 0
 
     def symmetrical_exists(self, user, status=None):
-        following = RelationshipStatus.objects.following()
         query = {'to_users__from_user': self.instance,
                  'to_users__to_user': user,
                  'from_users__to_user': self.instance,
-                 'from_users__to_user': usef}
+                 'from_users__from_user': user}
         if status:
             query.update({
                 'to_users__status': status,

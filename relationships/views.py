@@ -4,7 +4,9 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render_to_response
+from django.template import RequestContext
 from django.utils import simplejson as json
+from django.utils.http import urlquote
 from django.views.generic.list_detail import object_list
 
 from relationships.decorators import require_user
