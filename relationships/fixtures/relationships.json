@@ -110,5 +110,27 @@
       "created": "2010-03-21 23:08:55", 
       "from_user": 3
     }
-  }
+  },
+  {
+    "pk": 1, 
+    "model": "relationships.relationshipstatus", 
+    "fields": {
+      "name": "Following", 
+      "to_slug": "following", 
+      "from_slug": "followers",
+      "symmetrical_slug": "friends",
+      "verb": "follow"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "relationships.relationshipstatus", 
+    "fields": {
+      "name": "Blocking", 
+      "to_slug": "blocking", 
+      "from_slug": "blockers",
+      "symmetrical_slug": "!",
+      "verb": "block"
+    }
+  } 
 ]

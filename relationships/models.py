@@ -1,14 +1,41 @@
 import django
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models, connection
 from django.db.models.fields.related import create_many_related_manager, ManyToManyRel
-from relationships.constants import *
+
+
+class RelationshipStatusManager(models.Manager):
+    # convenience methods to handle some default statuses
+    def following(self):
+        return self.get(to_slug='following')
+
+    def blocking(self):
+        return self.get(to_slug='blocking')
+
+
+class RelationshipStatus(models.Model):
+    name = models.CharField(max_length=100)
+    verb = models.CharField(max_length=100)
+    from_slug = models.SlugField(unique=True)
+    to_slug = models.SlugField(unique=True)
+    symmetrical_slug = models.SlugField(unique=True)
+    login_required = models.BooleanField(default=False)
+    private = models.BooleanField(default=False)
+
+    objects = RelationshipStatusManager()
+    
+    class Meta:
+        ordering = ('name',)
+
+    def __unicode__(self):
+        return self.name
+
 
 class Relationship(models.Model):
     from_user = models.ForeignKey(User, related_name='from_users')
     to_user = models.ForeignKey(User, related_name='to_users')
-    status = models.IntegerField(default=RELATIONSHIP_FOLLOWING, 
-                                 choices=RELATIONSHIP_STATUSES)
+    status = models.ForeignKey(RelationshipStatus)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -27,14 +54,18 @@ class RelationshipManager(User._default_manager.__class__):
         super(RelationshipManager, self).__init__(*args, **kwargs)
         self.instance = instance
 
-    def add(self, user, status=RELATIONSHIP_FOLLOWING):
+    def add(self, user, status=None):
+        if not status:
+            status = RelationshipStatus.objects.following()
         relationship, created = Relationship.objects.get_or_create(
             from_user=self.instance,
             to_user=user,
             status=status)
         return relationship
 
-    def remove(self, user, status=RELATIONSHIP_FOLLOWING):
+    def remove(self, user, status=None):
+        if not status:
+            status = RelationshipStatus.objects.following()
         Relationship.objects.filter(
             from_user=self.instance, 
             to_user=user,
@@ -50,19 +81,14 @@ class RelationshipManager(User._default_manager.__class__):
         return User.objects.filter(
             from_users__to_user=self.instance,
             from_users__status=status)
-    
-    def following(self):
-        return self.get_relationships(RELATIONSHIP_FOLLOWING)
-    
-    def followers(self):
-        return self.get_related_to(RELATIONSHIP_FOLLOWING)
-    
-    def blocking(self):
-        return self.get_relationships(RELATIONSHIP_BLOCKING)
-    
-    def blockers(self):
-        return self.get_related_to(RELATIONSHIP_BLOCKING)
 
+    def get_symmetrical(self, status):
+        return User.objects.filter(
+            to_users__status=status, 
+            to_users__from_user=self.instance,
+            from_users__status=status, 
+            from_users__to_user=self.instance)
+    
     def exists(self, user, status=None):
         query = {'to_users__from_user': self.instance,
                  'to_users__to_user': user}
@@ -70,12 +96,34 @@ class RelationshipManager(User._default_manager.__class__):
             query['to_users__status'] = status
         return User.objects.filter(**query).count() != 0
 
+    def symmetrical_exists(self, user, status=None):
+        following = RelationshipStatus.objects.following()
+        query = {'to_users__from_user': self.instance,
+                 'to_users__to_user': user,
+                 'from_users__to_user': self.instance,
+                 'from_users__to_user': usef}
+        if status:
+            query.update({
+                'to_users__status': status,
+                'from_users__status': status})
+        return User.objects.filter(**query).count() != 0
+
+    # some defaults
+    def following(self):
+        return self.get_relationships(RelationshipStatus.objects.following())
+    
+    def followers(self):
+        return self.get_related_to(RelationshipStatus.objects.following())
+    
+    def blocking(self):
+        return self.get_relationships(RelationshipStatus.objects.blocking())
+    
+    def blockers(self):
+        return self.get_related_to(RelationshipStatus.objects.blocking())
+
     def friends(self):
-        return User.objects.filter(
-            to_users__status=RELATIONSHIP_FOLLOWING, 
-            to_users__from_user=self.instance,
-            from_users__status=RELATIONSHIP_FOLLOWING, 
-            from_users__to_user=self.instance)
+        return self.get_symmetrical(RelationshipStatus.objects.following())
+    
 
 if django.VERSION < (1, 2):
 

@@ -130,8 +130,6 @@ class RelationshipsTestCase(TestCase):
         self.assertEquals(list(rel), [])
 
         # test exists() method
-        # these tests are going to be exhaustive as I hope to have a cleaner
-        # implementation of exists() soon that will fix the queryset chaining
         self.assertTrue(self.john.relationships.exists(self.yoko))
         self.assertTrue(self.john.relationships.exists(self.paul))
         self.assertTrue(self.yoko.relationships.exists(self.john))

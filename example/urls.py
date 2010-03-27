@@ -4,4 +4,5 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     (r'^admin/', include(admin.site.urls)),
+    url(r'^relationships/', include('relationships.urls')),
 )

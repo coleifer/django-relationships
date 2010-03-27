@@ -7,6 +7,19 @@ class Migration:
     
     def forwards(self, orm):
         
+        # Adding model 'RelationshipStatus'
+        db.create_table('relationships_relationshipstatus', (
+            ('id', orm['relationships.RelationshipStatus:id']),
+            ('name', orm['relationships.RelationshipStatus:name']),
+            ('verb', orm['relationships.RelationshipStatus:verb']),
+            ('from_slug', orm['relationships.RelationshipStatus:from_slug']),
+            ('to_slug', orm['relationships.RelationshipStatus:to_slug']),
+            ('symmetrical_slug', orm['relationships.RelationshipStatus:symmetrical_slug']),
+            ('login_required', orm['relationships.RelationshipStatus:login_required']),
+            ('private', orm['relationships.RelationshipStatus:private']),
+        ))
+        db.send_create_signal('relationships', ['RelationshipStatus'])
+        
         # Adding model 'Relationship'
         db.create_table('relationships_relationship', (
             ('id', orm['relationships.Relationship:id']),
@@ -18,14 +31,17 @@ class Migration:
         db.send_create_signal('relationships', ['Relationship'])
         
         # Creating unique_together for [from_user, to_user, status] on Relationship.
-        db.create_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status'])
+        db.create_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id'])
         
     
     
     def backwards(self, orm):
         
         # Deleting unique_together for [from_user, to_user, status] on Relationship.
-        db.delete_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status'])
+        db.delete_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id'])
+        
+        # Deleting model 'RelationshipStatus'
+        db.delete_table('relationships_relationshipstatus')
         
         # Deleting model 'Relationship'
         db.delete_table('relationships_relationship')
@@ -73,8 +89,18 @@ class Migration:
             'created': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'from_user': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'from_users'", 'to': "orm['auth.User']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'status': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
+            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['relationships.RelationshipStatus']"}),
             'to_user': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'to_users'", 'to': "orm['auth.User']"})
+        },
+        'relationships.relationshipstatus': {
+            'from_slug': ('django.db.models.fields.SlugField', [], {'unique': 'True', 'max_length': '50', 'db_index': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'login_required': ('django.db.models.fields.BooleanField', [], {'default': 'False', 'blank': 'True'}),
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
+            'private': ('django.db.models.fields.BooleanField', [], {'default': 'False', 'blank': 'True'}),
+            'symmetrical_slug': ('django.db.models.fields.SlugField', [], {'unique': 'True', 'max_length': '50', 'db_index': 'True'}),
+            'to_slug': ('django.db.models.fields.SlugField', [], {'unique': 'True', 'max_length': '50', 'db_index': 'True'}),
+            'verb': ('django.db.models.fields.CharField', [], {'max_length': '100'})
         }
     }
     
