@@ -131,7 +131,8 @@
       "from_slug": "blockers",
       "symmetrical_slug": "!",
       "verb": "block",
-      "login_required": "True"
+      "login_required": "True",
+      "private": "True"
     }
   } 
 ]

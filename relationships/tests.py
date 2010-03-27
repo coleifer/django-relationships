@@ -201,8 +201,14 @@ class RelationshipsViewsTestCase(TestCase):
         resp = self.client.get('/relationships/John/blocking/')
         self.assertQuerysetEqual(resp.context['relationship_list'], list(self.john.relationships.blocking()))
         
+        # this is private, only Paul can see who he's blocking
+        resp = self.client.get('/relationships/Paul/blocking/')
+        self.assertEqual(resp.status_code, 404)
+        
         resp = self.client.get('/relationships/John/walrus-friends/')
-        self.assertEquals(resp.status_code, 404)
+        self.assertEqual(resp.status_code, 404)
+        
+        
     
     def test_add_remove_views(self):
         # login required

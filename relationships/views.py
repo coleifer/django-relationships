@@ -51,7 +51,7 @@ def relationship_list(request, user, status_slug=None):
         qs = user.relationships.get_related_to(status=status)
     else:
         qs = user.relationships.get_symmetrical(status=status)
-    return _relationship_list(request, qs)
+    return _relationship_list(request, qs, extra_context={'status': status})
 
 @login_required
 @require_user
@@ -70,5 +70,5 @@ def relationship_handler(request, user, status_slug, add=True,
         if request.GET.get('next'):
             return HttpResponseRedirect(request.GET['next'])
         template_name = success_template_name
-    return render_to_response(template_name, {'to': user, 'status': status},
+    return render_to_response(template_name, {'to_user': user, 'status': status},
         context_instance=RequestContext(request))

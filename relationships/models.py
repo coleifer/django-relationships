@@ -17,11 +17,16 @@ class RelationshipStatusManager(models.Manager):
 class RelationshipStatus(models.Model):
     name = models.CharField(max_length=100)
     verb = models.CharField(max_length=100)
-    from_slug = models.SlugField(unique=True)
-    to_slug = models.SlugField(unique=True)
-    symmetrical_slug = models.SlugField(unique=True)
-    login_required = models.BooleanField(default=False)
-    private = models.BooleanField(default=False)
+    from_slug = models.SlugField(unique=True,
+        help_text="Denote the relationship from the user, i.e. 'following'")
+    to_slug = models.SlugField(unique=True,
+        help_text="Denote the relationship to the user, i.e. 'followers'")
+    symmetrical_slug = models.SlugField(unique=True,
+        help_text="When a mutual relationship exists, i.e. 'friends'")
+    login_required = models.BooleanField(default=False,
+        help_text="Users must be logged in to see these relationships")
+    private = models.BooleanField(default=False,
+        help_text="Only the user who owns these relationships can see them")
 
     objects = RelationshipStatusManager()
     
