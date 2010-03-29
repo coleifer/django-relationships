@@ -116,8 +116,8 @@
     "model": "relationships.relationshipstatus", 
     "fields": {
       "name": "Following", 
-      "to_slug": "following", 
-      "from_slug": "followers",
+      "to_slug": "followers", 
+      "from_slug": "following",
       "symmetrical_slug": "friends",
       "verb": "follow"
     }
@@ -127,8 +127,8 @@
     "model": "relationships.relationshipstatus", 
     "fields": {
       "name": "Blocking", 
-      "to_slug": "blocking", 
-      "from_slug": "blockers",
+      "to_slug": "blockers", 
+      "from_slug": "blocking",
       "symmetrical_slug": "!",
       "verb": "block",
       "login_required": "True",

@@ -8,10 +8,10 @@ from django.db.models.fields.related import create_many_related_manager, ManyToM
 class RelationshipStatusManager(models.Manager):
     # convenience methods to handle some default statuses
     def following(self):
-        return self.get(to_slug='following')
+        return self.get(from_slug='following')
 
     def blocking(self):
-        return self.get(to_slug='blocking')
+        return self.get(from_slug='blocking')
 
 
 class RelationshipStatus(models.Model):

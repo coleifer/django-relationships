@@ -45,9 +45,9 @@ def relationship_list(request, user, status_slug=None):
         raise Http404
     
     # get a queryset of users described by this relationship
-    if status.to_slug == status_slug:
+    if status.from_slug == status_slug:
         qs = user.relationships.get_relationships(status=status)
-    elif status.from_slug == status_slug:
+    elif status.to_slug == status_slug:
         qs = user.relationships.get_related_to(status=status)
     else:
         qs = user.relationships.get_symmetrical(status=status)
@@ -58,7 +58,7 @@ def relationship_list(request, user, status_slug=None):
 def relationship_handler(request, user, status_slug, add=True,
                          template_name='relationships/confirm.html',
                          success_template_name='relationships/success.html'):
-    status = get_object_or_404(RelationshipStatus, to_slug=status_slug)
+    status = get_object_or_404(RelationshipStatus, from_slug=status_slug)
     if request.method == 'POST':
         if add:
             request.user.relationships.add(user, status)
