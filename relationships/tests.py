@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
-from relationships.models import Relationship
+from django.template import Template, Context
+from relationships.models import Relationship, RelationshipStatus
 
 class RelationshipsTestCase(TestCase):
     fixtures = ['relationships.json']
@@ -208,8 +209,6 @@ class RelationshipsViewsTestCase(TestCase):
         resp = self.client.get('/relationships/John/walrus-friends/')
         self.assertEqual(resp.status_code, 404)
         
-        
-    
     def test_add_remove_views(self):
         # login required
         resp = self.client.get('/relationships/add/The_Walrus/following/')
@@ -235,3 +234,63 @@ class RelationshipsViewsTestCase(TestCase):
         
         resp = self.client.post('/relationships/add/Nobody/following/')
         self.assertEqual(resp.status_code, 404)
+
+
+class RelationshipsTagsTestCase(TestCase):
+    fixtures = ['relationships.json']
+    
+    def setUp(self):
+        self.walrus = User.objects.get(username='The_Walrus')
+        self.john = User.objects.get(username='John')
+        self.paul = User.objects.get(username='Paul')
+        self.yoko = User.objects.get(username='Yoko')
+        self.following = RelationshipStatus.objects.get(from_slug='following')
+        self.blocking = RelationshipStatus.objects.get(from_slug='blocking')
+    
+    def test_add_url_filter(self):
+        t = Template('{% load relationship_tags %}{{ user|add_relationship_url:"following" }}')
+        c = Context({'user': self.paul})
+        rendered = t.render(c)
+        self.assertEqual(rendered, '/relationships/add/Paul/following/')
+        
+        t = Template('{% load relationship_tags %}{{ user|add_relationship_url:blocking }}')
+        c = Context({'user': self.paul, 'blocking': self.blocking})
+        rendered = t.render(c)
+        self.assertEqual(rendered, '/relationships/add/Paul/blocking/')
+    
+    def test_remove_url_filter(self):
+        t = Template('{% load relationship_tags %}{{ user|remove_relationship_url:"following" }}')
+        c = Context({'user': self.paul})
+        rendered = t.render(c)
+        self.assertEqual(rendered, '/relationships/remove/Paul/following/')
+        
+        t = Template('{% load relationship_tags %}{{ user|remove_relationship_url:blocking }}')
+        c = Context({'user': self.paul, 'blocking': self.blocking})
+        rendered = t.render(c)
+        self.assertEqual(rendered, '/relationships/remove/Paul/blocking/')
+    
+    def test_if_relationship_tag(self):
+        t = Template('{% load relationship_tags %}{% if_relationship john paul "following" %}y{% else %}n{% endif_relationship %}')
+        c = Context({'john': self.john, 'paul': self.paul})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'y')
+        
+        t = Template('{% load relationship_tags %}{% if_relationship paul john "following" %}y{% else %}n{% endif_relationship %}')
+        c = Context({'john': self.john, 'paul': self.paul})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'n')
+        
+        t = Template('{% load relationship_tags %}{% if_relationship paul john "followers" %}y{% else %}n{% endif_relationship %}')
+        c = Context({'john': self.john, 'paul': self.paul})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'y')
+        
+        t = Template('{% load relationship_tags %}{% if_relationship paul john "friends" %}y{% else %}n{% endif_relationship %}')
+        c = Context({'john': self.john, 'paul': self.paul})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'n')
+        
+        t = Template('{% load relationship_tags %}{% if_relationship john yoko "friends" %}y{% else %}n{% endif_relationship %}')
+        c = Context({'john': self.john, 'yoko': self.yoko})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'y')

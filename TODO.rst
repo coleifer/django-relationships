@@ -1,4 +1,5 @@
 Todo
 ====
 
-* write tests
+* better templates
+* invitations?
