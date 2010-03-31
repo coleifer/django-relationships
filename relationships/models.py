@@ -1,6 +1,7 @@
 import django
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
 from django.db import models, connection
 from django.db.models.fields.related import create_many_related_manager, ManyToManyRel
 
@@ -42,6 +43,7 @@ class Relationship(models.Model):
     to_user = models.ForeignKey(User, related_name='to_users')
     status = models.ForeignKey(RelationshipStatus)
     created = models.DateTimeField(auto_now_add=True)
+    site = models.ForeignKey(Site, default=settings.SITE_ID)
 
     class Meta:
         unique_together = (('from_user', 'to_user', 'status'),)
