@@ -2,6 +2,7 @@ import re
 from django import template
 from django.core.urlresolvers import reverse
 from django.db.models import Q
+from django.template import TemplateSyntaxError
 
 from relationships.models import Relationship, RelationshipStatus
 
