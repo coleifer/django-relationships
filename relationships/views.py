@@ -20,12 +20,16 @@ def _relationship_list(request, queryset, *args, **kwargs):
         page=int(request.GET.get('page', 0)),
         template_object_name='relationship',
         template_name='relationships/relationship_list.html',
+        *args,
         **kwargs)
 
 @require_user
 def relationship_list(request, user, status_slug=None):
     if not status_slug:
-        return _relationship_list(request, user.relationships.all())
+        return _relationship_list(
+            request,
+            user.relationships.all(),
+            extra_context={'from_user': user})
     
     # get the relationship status object we're talking about
     try:
@@ -51,7 +55,8 @@ def relationship_list(request, user, status_slug=None):
         qs = user.relationships.get_related_to(status=status)
     else:
         qs = user.relationships.get_symmetrical(status=status)
-    return _relationship_list(request, qs, extra_context={'status': status})
+    return _relationship_list(request, qs, extra_context={
+        'from_user': user, 'status': status, 'status_slug': status_slug})
 
 @login_required
 @require_user
