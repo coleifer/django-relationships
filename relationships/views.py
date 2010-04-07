@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render_to_response
@@ -11,6 +12,10 @@ from django.views.generic.list_detail import object_list
 
 from relationships.decorators import require_user
 from relationships.models import Relationship, RelationshipStatus
+
+@login_required
+def relationship_redirect(request):
+    return HttpResponseRedirect(reverse('relationship_list', args=[request.user.username]))
 
 def _relationship_list(request, queryset, *args, **kwargs):
     return object_list(
