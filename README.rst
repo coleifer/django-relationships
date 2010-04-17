@@ -39,6 +39,13 @@ users to see who is blocking them), simply give it a unmatchable slug,
 like '!blockers'.
 
 
+Admin Interface
+---------------
+
+Relationships hook right into the pre-existing User admin, and appear below
+the 'Groups' inline.
+
+
 Installation
 ------------
 
