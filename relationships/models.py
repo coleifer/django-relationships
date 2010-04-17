@@ -18,11 +18,11 @@ class RelationshipStatusManager(models.Manager):
 class RelationshipStatus(models.Model):
     name = models.CharField(max_length=100)
     verb = models.CharField(max_length=100)
-    from_slug = models.SlugField(unique=True,
+    from_slug = models.CharField(max_length=100,
         help_text="Denote the relationship from the user, i.e. 'following'")
-    to_slug = models.SlugField(unique=True,
+    to_slug = models.CharField(max_length=100,
         help_text="Denote the relationship to the user, i.e. 'followers'")
-    symmetrical_slug = models.SlugField(unique=True,
+    symmetrical_slug = models.CharField(max_length=100,
         help_text="When a mutual relationship exists, i.e. 'friends'")
     login_required = models.BooleanField(default=False,
         help_text="Users must be logged in to see these relationships")
@@ -33,6 +33,7 @@ class RelationshipStatus(models.Model):
     
     class Meta:
         ordering = ('name',)
+        verbose_name_plural = 'Relationship statuses'
 
     def __unicode__(self):
         return self.name

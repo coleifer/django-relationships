@@ -1,6 +1,8 @@
+from django import forms
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.template import Template, Context
+from relationships.forms import RelationshipStatusAdminForm
 from relationships.models import Relationship, RelationshipStatus
 
 class RelationshipsTestCase(TestCase):
@@ -294,3 +296,66 @@ class RelationshipsTagsTestCase(TestCase):
         c = Context({'john': self.john, 'yoko': self.yoko})
         rendered = t.render(c)
         self.assertEqual(rendered, 'y')
+
+class RelationshipStatusAdminFormTestCase(TestCase):
+    fixtures = ['relationships.json']
+
+    def setUp(self):
+        self.walrus = User.objects.get(username='The_Walrus')
+        self.john = User.objects.get(username='John')
+        self.paul = User.objects.get(username='Paul')
+        self.yoko = User.objects.get(username='Yoko')
+        self.following = RelationshipStatus.objects.get(from_slug='following')
+        self.blocking = RelationshipStatus.objects.get(from_slug='blocking')
+
+    def test_no_dupes(self):
+        payload = {
+            'name': 'Testing',
+            'verb': 'testing',
+            'from_slug': 'testing',
+            'to_slug': 'testers',
+            'symmetrical_slug': 'tests'
+        }
+        form = RelationshipStatusAdminForm(payload)
+        self.assertTrue(form.is_valid())
+        test_status = form.save()
+
+        # saving again should work
+        form = RelationshipStatusAdminForm(payload, instance=test_status)
+        self.assertTrue(form.is_valid())
+
+        payload['from_slug'] = 'testers'
+        payload['to_slug'] = 'testing'
+        
+        # saving will work since it will not test against the current instance
+        form = RelationshipStatusAdminForm(payload, instance=test_status)
+        self.assertTrue(form.is_valid())
+
+        # setting the from_slug to the to_slug will raise an error
+        payload['from_slug'] = 'testers'
+        payload['to_slug'] = 'testers'
+        form = RelationshipStatusAdminForm(payload, instance=test_status)
+        self.assertFalse(form.is_valid())
+
+        # setting the from_slug to the symmetrical_slug will raise an error
+        payload['from_slug'] = 'tests'
+        form = RelationshipStatusAdminForm(payload, instance=test_status)
+        self.assertFalse(form.is_valid())
+
+        # setting to a pre-existing from_slug will fail
+        payload['from_slug'] = 'following'
+        form = RelationshipStatusAdminForm(payload)
+        self.assertFalse(form.is_valid())
+        self.assertTrue('from_slug' in form.errors)
+
+        # setting the from_slug to a pre-existing to_slug will also fail
+        payload['from_slug'] = 'followers'
+        form = RelationshipStatusAdminForm(payload)
+        self.assertFalse(form.is_valid())
+        self.assertTrue('from_slug' in form.errors)
+
+        # setting the from_slug to a pre-existing symetrical_slug will also fail
+        payload['from_slug'] = 'friends'
+        form = RelationshipStatusAdminForm(payload)
+        self.assertFalse(form.is_valid())
+        self.assertTrue('from_slug' in form.errors)
