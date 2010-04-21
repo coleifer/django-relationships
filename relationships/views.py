@@ -80,5 +80,6 @@ def relationship_handler(request, user, status_slug, add=True,
         if request.GET.get('next'):
             return HttpResponseRedirect(request.GET['next'])
         template_name = success_template_name
-    return render_to_response(template_name, {'to_user': user, 'status': status},
+    return render_to_response(template_name, 
+        {'to_user': user, 'status': status, 'add': add},
         context_instance=RequestContext(request))
