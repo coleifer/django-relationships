@@ -350,6 +350,12 @@ class RelationshipsTagsTestCase(TestCase):
         c = Context({'user': self.john, 'qs': Group.objects.all()})
         rendered = t.render(c)
         self.assertEqual(rendered, 'beatles|')
+
+        # make sure it works with a model string
+        t = Template('{% load relationship_tags %}{% for group in "auth.group"|unblocked_content:user %}{{ group.name }}|{% endfor %}')
+        c = Context({'user': self.john})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'beatles|')
         
         
 
