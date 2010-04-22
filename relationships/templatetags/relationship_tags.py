@@ -107,26 +107,26 @@ def remove_relationship_url(user, status):
 
 def positive_filter_decorator(func):
     def inner(qs, user):
-        if user.is_anonymous():
-            return qs.none()
         if isinstance(qs, basestring):
             model = get_model(*qs.split('.'))
             if not model:
-                return qs.none()
+                return []
             qs = model._default_manager.all()
+        if user.is_anonymous():
+            return qs.none()
         return func(qs, user)
     inner._decorated_function = getattr(func, '_decorated_function', func)
     return wraps(func)(inner)
 
 def negative_filter_decorator(func):
     def inner(qs, user):
-        if user.is_anonymous():
-            return qs.all()
         if isinstance(qs, basestring):
             model = get_model(*qs.split('.'))
             if not model:
-                return qs.all()
+                return []
             qs = model._default_manager.all()
+        if user.is_anonymous():
+            return qs
         return func(qs, user)
     inner._decorated_function = getattr(func, '_decorated_function', func)
     return wraps(func)(inner)
