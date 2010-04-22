@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.template import TemplateSyntaxError
 
 from relationships.models import Relationship, RelationshipStatus
+from relationships.utils import positive_filter, negative_filter
 
 register = template.Library()
 
@@ -101,3 +102,19 @@ def remove_relationship_url(user, status):
     if isinstance(status, RelationshipStatus):
         status = status.from_slug
     return reverse('relationship_remove', args=[user.username, status])
+
+@register.filter
+def friend_content(qs, user):
+    return positive_filter(qs, user.relationships.friends())
+
+@register.filter
+def following_content(qs, user):
+    return positive_filter(qs, user.relationships.following())
+
+@register.filter
+def followers_content(qs, user):
+    return positive_filter(qs, user.relationships.followers())
+
+@register.filter
+def unblocked_content(qs, user):
+    return negative_filter(qs, user.relationships.blocking())

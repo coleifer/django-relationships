@@ -1,9 +1,11 @@
 from django import forms
+from django.conf import settings
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.template import Template, Context
 from relationships.forms import RelationshipStatusAdminForm
 from relationships.models import Relationship, RelationshipStatus
+from relationships.utils import extract_user_field, positive_filter, negative_filter
 
 class RelationshipsTestCase(TestCase):
     fixtures = ['relationships.json']
@@ -297,6 +299,60 @@ class RelationshipsTagsTestCase(TestCase):
         rendered = t.render(c)
         self.assertEqual(rendered, 'y')
 
+    def test_status_filters(self):
+        # create some groups to filter
+        from django.contrib.auth.models import Group
+        beatles = Group.objects.create(name='beatles')
+        john_yoko = Group.objects.create(name='john_yoko')
+        characters = Group.objects.create(name='characters')
+
+        self.walrus.groups.add(characters)
+
+        self.john.groups.add(beatles)
+        self.john.groups.add(john_yoko)
+
+        self.paul.groups.add(beatles)
+
+        self.yoko.groups.add(john_yoko)
+        self.yoko.groups.add(characters)
+
+        # john is friends w/ yoko so show yoko's groups
+        t = Template('{% load relationship_tags %}{% for group in qs|friend_content:user %}{{ group.name }}|{% endfor %}')
+        c = Context({'user': self.john, 'qs': Group.objects.all()})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'john_yoko|characters|')
+
+        # paul is friends w/ nobody, so no groups
+        c = Context({'user': self.paul, 'qs': Group.objects.all()})
+        rendered = t.render(c)
+        self.assertEqual(rendered, '')
+
+        # john is following paul & yoko
+        t = Template('{% load relationship_tags %}{% for group in qs|following_content:user %}{{ group.name }}|{% endfor %}')
+        c = Context({'user': self.john, 'qs': Group.objects.all()})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'beatles|john_yoko|characters|')
+
+        # yoko is followed by john
+        t = Template('{% load relationship_tags %}{% for group in qs|followers_content:user %}{{ group.name }}|{% endfor %}')
+        c = Context({'user': self.yoko, 'qs': Group.objects.all()})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'beatles|john_yoko|')
+
+        # paul is blocking john, so every group but ones with him
+        t = Template('{% load relationship_tags %}{% for group in qs|unblocked_content:user %}{{ group.name }}|{% endfor %}')
+        c = Context({'user': self.paul, 'qs': Group.objects.all()})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'characters|')
+
+        # oh no, john is blocking yoko
+        self.john.relationships.add(self.yoko, RelationshipStatus.objects.blocking())
+        c = Context({'user': self.john, 'qs': Group.objects.all()})
+        rendered = t.render(c)
+        self.assertEqual(rendered, 'beatles|')
+        
+        
+
 class RelationshipStatusAdminFormTestCase(TestCase):
     fixtures = ['relationships.json']
 
@@ -359,3 +415,137 @@ class RelationshipStatusAdminFormTestCase(TestCase):
         form = RelationshipStatusAdminForm(payload)
         self.assertFalse(form.is_valid())
         self.assertTrue('from_slug' in form.errors)
+
+
+class RelationshipUtilsTestCase(TestCase):
+    fixtures = ['relationships.json']
+    
+    def setUp(self):
+        self.walrus = User.objects.get(username='The_Walrus')
+        self.john = User.objects.get(username='John')
+        self.paul = User.objects.get(username='Paul')
+        self.yoko = User.objects.get(username='Yoko')
+
+    def assertQuerysetEqual(self, a, b):
+        return self.assertEqual(list(a), list(b))
+        
+    def test_extract_user_field(self):
+        # just test a known pass and known fail
+        from django.contrib.comments.models import Comment
+        from django.contrib.sites.models import Site
+        
+        self.assertEqual(extract_user_field(Comment), 'user')
+        self.assertEqual(extract_user_field(Site), None)
+
+    def test_positive_filter(self):
+        following = RelationshipStatus.objects.following()
+        blocking = RelationshipStatus.objects.blocking()
+
+        # create some groups to filter
+        from django.contrib.auth.models import Group
+        beatles = Group.objects.create(name='beatles')
+        john_yoko = Group.objects.create(name='john_yoko')
+        characters = Group.objects.create(name='characters')
+
+        self.walrus.groups.add(characters)
+
+        self.john.groups.add(beatles)
+        self.john.groups.add(john_yoko)
+
+        self.paul.groups.add(beatles)
+
+        self.yoko.groups.add(john_yoko)
+        self.yoko.groups.add(characters)
+
+        # groups people paul follows are in (nobody)
+        paul_following_groups = positive_filter(Group.objects.all(),
+            self.paul.relationships.following(), 'user')
+        self.assertQuerysetEqual(paul_following_groups, [])
+
+        # when paul follows john he will see john's groups
+        self.paul.relationships.add(self.john, following)
+        paul_following_groups = positive_filter(Group.objects.all(),
+            self.paul.relationships.following(), 'user')
+        self.assertQuerysetEqual(paul_following_groups, [beatles, john_yoko])
+
+        # now john's + walrus's
+        self.paul.relationships.add(self.walrus, following)
+        paul_following_groups = positive_filter(Group.objects.all(),
+            self.paul.relationships.following(), 'user')
+        self.assertQuerysetEqual(paul_following_groups, [beatles, john_yoko, characters])
+
+        # everybody's - distinct groups, no dupes
+        self.paul.relationships.add(self.yoko, following)
+        paul_following_groups = positive_filter(Group.objects.all(),
+            self.paul.relationships.following(), 'user')
+        self.assertQuerysetEqual(paul_following_groups, [beatles, john_yoko, characters])
+
+        # just groups walrus & yoko are in
+        self.paul.relationships.remove(self.john, following)
+        paul_following_groups = positive_filter(Group.objects.all(),
+            self.paul.relationships.following(), 'user')
+        self.assertQuerysetEqual(paul_following_groups, [john_yoko, characters])
+
+        # just walrus' groups
+        self.paul.relationships.remove(self.yoko)
+        paul_following_groups = positive_filter(Group.objects.all(),
+            self.paul.relationships.following(), 'user')
+        self.assertQuerysetEqual(paul_following_groups, [characters])
+        
+        self.paul.relationships.remove(self.walrus)
+
+    def test_negative_filter(self):
+        following = RelationshipStatus.objects.following()
+        blocking = RelationshipStatus.objects.blocking()
+
+        # create some groups to filter
+        from django.contrib.auth.models import Group
+        beatles = Group.objects.create(name='beatles')
+        john_yoko = Group.objects.create(name='john_yoko')
+        characters = Group.objects.create(name='characters')
+
+        self.walrus.groups.add(characters)
+
+        self.john.groups.add(beatles)
+        self.john.groups.add(john_yoko)
+
+        self.paul.groups.add(beatles)
+
+        self.yoko.groups.add(john_yoko)
+        self.yoko.groups.add(characters)
+
+        # groups people paul blocks are *not* in (yoko & walrus)
+        # since john is in the john_yoko group, just characters will show up
+        paul_blocking_groups = negative_filter(Group.objects.all(), 
+            self.paul.relationships.blocking(), 'user')
+        self.assertQuerysetEqual(paul_blocking_groups, [characters])
+
+        # block yoko and no groups
+        self.paul.relationships.add(self.yoko, blocking)
+        paul_blocking_groups = negative_filter(Group.objects.all(),
+            self.paul.relationships.blocking(), 'user')
+        self.assertQuerysetEqual(paul_blocking_groups, [])
+
+        # block walrus - everyone is blocked, no groups
+        self.paul.relationships.add(self.walrus, blocking)
+        paul_blocking_groups = negative_filter(Group.objects.all(),
+            self.paul.relationships.blocking(), 'user')
+        self.assertQuerysetEqual(paul_blocking_groups, [])
+
+        # unblock john and we'll get beatles
+        self.paul.relationships.remove(self.john, blocking)
+        paul_blocking_groups = negative_filter(Group.objects.all(),
+            self.paul.relationships.blocking(), 'user')
+        self.assertQuerysetEqual(paul_blocking_groups, [beatles])
+
+        # unblock yoko
+        self.paul.relationships.remove(self.yoko, blocking)
+        paul_blocking_groups = negative_filter(Group.objects.all(),
+            self.paul.relationships.blocking(), 'user')
+        self.assertQuerysetEqual(paul_blocking_groups, [beatles, john_yoko])
+
+        # unblock walrus and we have them all
+        self.paul.relationships.remove(self.walrus, blocking)
+        paul_blocking_groups = negative_filter(Group.objects.all(),
+            self.paul.relationships.blocking(), 'user')
+        self.assertQuerysetEqual(paul_blocking_groups, [beatles, john_yoko, characters])
