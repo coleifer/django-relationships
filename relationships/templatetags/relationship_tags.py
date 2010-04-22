@@ -105,16 +105,24 @@ def remove_relationship_url(user, status):
 
 @register.filter
 def friend_content(qs, user):
+    if user.is_anonymous():
+        return qs.none()
     return positive_filter(qs, user.relationships.friends())
 
 @register.filter
 def following_content(qs, user):
+    if user.is_anonymous():
+        return qs.none()
     return positive_filter(qs, user.relationships.following())
 
 @register.filter
 def followers_content(qs, user):
+    if user.is_anonymous():
+        return qs.none()
     return positive_filter(qs, user.relationships.followers())
 
 @register.filter
 def unblocked_content(qs, user):
+    if user.is_anonymous():
+        return qs.all()
     return negative_filter(qs, user.relationships.blocking())
