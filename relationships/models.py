@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.db import models, connection
 from django.db.models.fields.related import create_many_related_manager, ManyToManyRel
+from django.utils.translation import ugettext_lazy as _
 
 
 class RelationshipStatusManager(models.Manager):
@@ -16,43 +17,50 @@ class RelationshipStatusManager(models.Manager):
 
 
 class RelationshipStatus(models.Model):
-    name = models.CharField(max_length=100)
-    verb = models.CharField(max_length=100)
-    from_slug = models.CharField(max_length=100,
-        help_text="Denote the relationship from the user, i.e. 'following'")
-    to_slug = models.CharField(max_length=100,
-        help_text="Denote the relationship to the user, i.e. 'followers'")
-    symmetrical_slug = models.CharField(max_length=100,
-        help_text="When a mutual relationship exists, i.e. 'friends'")
-    login_required = models.BooleanField(default=False,
-        help_text="Users must be logged in to see these relationships")
-    private = models.BooleanField(default=False,
-        help_text="Only the user who owns these relationships can see them")
+    name = models.CharField(_('name'), max_length=100)
+    verb = models.CharField(_('verb'), max_length=100)
+    from_slug = models.CharField(_('from slug'), max_length=100,
+        help_text=_("Denote the relationship from the user, i.e. 'following'"))
+    to_slug = models.CharField(_('to slug'), max_length=100,
+        help_text=_("Denote the relationship to the user, i.e. 'followers'"))
+    symmetrical_slug = models.CharField(_('symmetrical slug'), max_length=100,
+        help_text=_("When a mutual relationship exists, i.e. 'friends'"))
+    login_required = models.BooleanField(_('login required'), default=False,
+        help_text=_("Users must be logged in to see these relationships"))
+    private = models.BooleanField(_('private'), default=False,
+        help_text=_("Only the user who owns these relationships can see them"))
 
     objects = RelationshipStatusManager()
     
     class Meta:
         ordering = ('name',)
-        verbose_name_plural = 'Relationship statuses'
+        verbose_name = _('Relationship status')
+        verbose_name_plural = _('Relationship statuses')
 
     def __unicode__(self):
         return self.name
 
 
 class Relationship(models.Model):
-    from_user = models.ForeignKey(User, related_name='from_users')
-    to_user = models.ForeignKey(User, related_name='to_users')
-    status = models.ForeignKey(RelationshipStatus)
-    created = models.DateTimeField(auto_now_add=True)
-    site = models.ForeignKey(Site, default=settings.SITE_ID)
+    from_user = models.ForeignKey(User,
+        related_name='from_users', verbose_name=_('from user'))
+    to_user = models.ForeignKey(User,
+        related_name='to_users', verbose_name=_('to user'))
+    status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'))
+    created = models.DateTimeField(_('created'), auto_now_add=True)
+    site = models.ForeignKey(Site,
+        default=settings.SITE_ID, verbose_name=_('site'))
 
     class Meta:
         unique_together = (('from_user', 'to_user', 'status'),)
         ordering = ('created',)
+        verbose_name = _('Relationship')
+        verbose_name_plural = _('Relationships')
 
     def __unicode__(self):
-        return 'Relationship from %s to %s' % (self.from_user.username,
-                                               self.to_user.username)
+        return (_('Relationship from %(from_user)s to %(to_user)s')
+                % { 'from_user': self.from_user.username,
+                    'to_user': self.to_user.username})
 
 field = models.ManyToManyField(User, through=Relationship, 
                                symmetrical=False, related_name='related_to')

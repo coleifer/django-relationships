@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block content %}
-  <h1>Really?</h1>
+  <h1>{% trans "Really?" %}</h1>
   <form method="post">
-    <input type="submit" value="Yes" />
+    <input type="submit" value="{% trans "Yes" %}" />
   </form>
 {% endblock %}
