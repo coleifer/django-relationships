@@ -1,0 +1,118 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2010-04-23 11:33+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: models.py:20
+msgid "name"
+msgstr ""
+
+#: models.py:21
+msgid "verb"
+msgstr ""
+
+#: models.py:22
+msgid "from slug"
+msgstr ""
+
+#: models.py:23
+msgid "Denote the relationship from the user, i.e. 'following'"
+msgstr ""
+
+#: models.py:24
+msgid "to slug"
+msgstr ""
+
+#: models.py:25
+msgid "Denote the relationship to the user, i.e. 'followers'"
+msgstr ""
+
+#: models.py:26
+msgid "symmetrical slug"
+msgstr ""
+
+#: models.py:27
+msgid "When a mutual relationship exists, i.e. 'friends'"
+msgstr ""
+
+#: models.py:28
+msgid "login required"
+msgstr ""
+
+#: models.py:29
+msgid "Users must be logged in to see these relationships"
+msgstr ""
+
+#: models.py:30
+msgid "private"
+msgstr ""
+
+#: models.py:31
+msgid "Only the user who owns these relationships can see them"
+msgstr ""
+
+#: models.py:37
+msgid "Relationship status"
+msgstr ""
+
+#: models.py:38
+msgid "Relationship statuses"
+msgstr ""
+
+#: models.py:46
+msgid "from user"
+msgstr ""
+
+#: models.py:48
+msgid "to user"
+msgstr ""
+
+#: models.py:49
+msgid "status"
+msgstr ""
+
+#: models.py:50
+msgid "created"
+msgstr ""
+
+#: models.py:52
+msgid "site"
+msgstr ""
+
+#: models.py:57
+msgid "Relationship"
+msgstr ""
+
+#: models.py:58
+msgid "Relationships"
+msgstr ""
+
+#: models.py:61
+#, python-format
+msgid "Relationship from %(from_user)s to %(to_user)s"
+msgstr ""
+
+#: templates/relationships/confirm.html:5
+msgid "Really?"
+msgstr ""
+
+#: templates/relationships/confirm.html:7
+msgid "Yes"
+msgstr ""
+
+#: templates/relationships/success.html:5
+msgid "Success"
+msgstr ""
