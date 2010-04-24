@@ -1,8 +1,9 @@
 from django import forms
 from django.conf import settings
-from django.test import TestCase
 from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
 from django.template import Template, Context
+from django.test import TestCase
 from relationships.forms import RelationshipStatusAdminForm
 from relationships.models import Relationship, RelationshipStatus
 from relationships.utils import extract_user_field, positive_filter, negative_filter
@@ -15,6 +16,15 @@ class RelationshipsTestCase(TestCase):
         self.john = User.objects.get(username='John')
         self.paul = User.objects.get(username='Paul')
         self.yoko = User.objects.get(username='Yoko')
+        
+        self.site_id = settings.SITE_ID
+        settings.SITE_ID = 1
+        
+        self.site = Site.objects.get_current()
+        self.second_site = Site.objects.create(name='ex2.com', domain='ex2.com')
+       
+    def tearDown(self):
+        settings.SITE_ID = self.site_id
     
     def assertQuerysetEqual(self, a, b):
         return self.assertEqual(list(a), list(b))
@@ -168,6 +178,26 @@ class RelationshipsTestCase(TestCase):
         self.assertTrue(self.yoko.relationships.symmetrical_exists(self.john, 1))
         self.assertFalse(self.yoko.relationships.symmetrical_exists(self.paul, 1))
         self.assertFalse(self.yoko.relationships.symmetrical_exists(self.walrus, 1))
+    
+    def test_site_behavior(self):
+        # relationships are site-dependent
+        
+        # walrus is now following John on the current site
+        self.walrus.relationships.add(self.john)
+        
+        status = RelationshipStatus.objects.following()
+        r, _ = Relationship.objects.get_or_create(
+            from_user=self.walrus,
+            to_user=self.paul,
+            site=self.second_site,
+            status=status)
+
+        self.assertQuerysetEqual(self.walrus.relationships.following(), [self.john])
+        self.assertQuerysetEqual(self.walrus.relationships.all(), [self.john, self.paul])
+        
+        # remove only works on the current site, so paul will *NOT* be removed
+        self.walrus.relationships.remove(self.paul)
+        self.assertQuerysetEqual(self.walrus.relationships.all(), [self.john, self.paul])
 
 
 class RelationshipsViewsTestCase(TestCase):

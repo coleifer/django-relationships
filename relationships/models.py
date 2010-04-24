@@ -76,7 +76,8 @@ class RelationshipManager(User._default_manager.__class__):
         relationship, created = Relationship.objects.get_or_create(
             from_user=self.instance,
             to_user=user,
-            status=status)
+            status=status,
+            site=Site.objects.get_current())
         return relationship
 
     def remove(self, user, status=None):
@@ -85,29 +86,35 @@ class RelationshipManager(User._default_manager.__class__):
         Relationship.objects.filter(
             from_user=self.instance, 
             to_user=user,
-            status=status).delete()
+            status=status,
+            site__pk=settings.SITE_ID).delete()
         return
     
     def get_relationships(self, status):
         return User.objects.filter(
             to_users__from_user=self.instance,
-            to_users__status=status)
+            to_users__status=status,
+            to_users__site__pk=settings.SITE_ID)
     
     def get_related_to(self, status):
         return User.objects.filter(
             from_users__to_user=self.instance,
-            from_users__status=status)
+            from_users__status=status,
+            from_users__site__pk=settings.SITE_ID)
 
     def get_symmetrical(self, status):
         return User.objects.filter(
             to_users__status=status, 
             to_users__from_user=self.instance,
+            to_users__site__pk=settings.SITE_ID,
             from_users__status=status, 
-            from_users__to_user=self.instance)
+            from_users__to_user=self.instance,
+            from_users__site__pk=settings.SITE_ID)
     
     def exists(self, user, status=None):
         query = {'to_users__from_user': self.instance,
-                 'to_users__to_user': user}
+                 'to_users__to_user': user,
+                 'to_users__site__pk': settings.SITE_ID}
         if status:
             query['to_users__status'] = status
         return User.objects.filter(**query).count() != 0
@@ -115,8 +122,10 @@ class RelationshipManager(User._default_manager.__class__):
     def symmetrical_exists(self, user, status=None):
         query = {'to_users__from_user': self.instance,
                  'to_users__to_user': user,
+                 'to_users__site__pk': settings.SITE_ID,
                  'from_users__to_user': self.instance,
-                 'from_users__from_user': user}
+                 'from_users__from_user': user,
+                 'from_users__site__pk': settings.SITE_ID}
         if status:
             query.update({
                 'to_users__status': status,
