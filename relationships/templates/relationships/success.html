@@ -3,4 +3,6 @@
 
 {% block content %}
   <h1>{% trans "Success" %}</h1>
+  <p>You are {% if add %}now{% else %}no longer{% endif %} {{ status.from_slug }} {{ to_user.username }}</p>
+  <p><a href="{{ to_user.get_absolute_url }}">{{ to_user.username }}'s profile</a></p>
 {% endblock %}
