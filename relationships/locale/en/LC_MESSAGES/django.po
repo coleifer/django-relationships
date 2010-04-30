@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-04-23 11:33+0200\n"
+"POT-Creation-Date: 2010-04-30 13:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -105,14 +105,32 @@ msgstr ""
 msgid "Relationship from %(from_user)s to %(to_user)s"
 msgstr ""
 
-#: templates/relationships/confirm.html:5
-msgid "Really?"
+#: templates/relationships/confirm.html:4
+#: templates/relationships/confirm.html:7
+msgid "No longer"
 msgstr ""
 
-#: templates/relationships/confirm.html:7
-msgid "Yes"
+#: templates/relationships/confirm.html:12
+msgid "Confirm"
 msgstr ""
 
 #: templates/relationships/success.html:5
 msgid "Success"
+msgstr ""
+
+#: templates/relationships/success.html:6
+msgid "You are "
+msgstr ""
+
+#: templates/relationships/success.html:6
+msgid "now"
+msgstr ""
+
+#: templates/relationships/success.html:6
+msgid "no longer"
+msgstr ""
+
+#: templates/relationships/success.html:7
+#, python-format
+msgid "%(to_user_username)s's profile"
 msgstr ""

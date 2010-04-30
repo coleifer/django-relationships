@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: django-relationships\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-04-23 11:28+0200\n"
+"POT-Creation-Date: 2010-04-30 13:32+0200\n"
 "PO-Revision-Date: 2010-04-23 11:10+0200\n"
 "Last-Translator: Jannis Leidel <jannis@leidel.info>\n"
 "Language-Team: de <de@li.org>\n"
@@ -106,14 +106,32 @@ msgstr "Beziehungen"
 msgid "Relationship from %(from_user)s to %(to_user)s"
 msgstr "Beziehung von %(from_user)s zu %(to_user)s"
 
-#: templates/relationships/confirm.html:5
-msgid "Really?"
-msgstr "Wirklich?"
-
+#: templates/relationships/confirm.html:4
 #: templates/relationships/confirm.html:7
-msgid "Yes"
-msgstr "Ja"
+msgid "No longer"
+msgstr "Nicht länger"
+
+#: templates/relationships/confirm.html:12
+msgid "Confirm"
+msgstr "Bestätigen"
 
 #: templates/relationships/success.html:5
 msgid "Success"
 msgstr "Erfolg"
+
+#: templates/relationships/success.html:6
+msgid "You are "
+msgstr "Sie sind"
+
+#: templates/relationships/success.html:6
+msgid "now"
+msgstr "jetzt"
+
+#: templates/relationships/success.html:6
+msgid "no longer"
+msgstr "nicht länger"
+
+#: templates/relationships/success.html:7
+#, python-format
+msgid "%(to_user_username)s's profile"
+msgstr "%(to_user_username)ss Profil"
