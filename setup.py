@@ -15,7 +15,15 @@ setup(
     author='Charles Leifer',
     author_email='coleifer@gmail.com',
     url='http://github.com/coleifer/django-relationships/tree/master',
-    packages=find_packages(),
+    packages=find_packages(exclude=['example']),
+    package_data = {
+        'relationships': [
+            'fixtures/*.json',
+            'templates/*.html',
+            'templates/*/*.html',
+            'locale/*/LC_MESSAGES/*',
+        ],
+    },
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
