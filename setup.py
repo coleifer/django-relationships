@@ -34,5 +34,3 @@ setup(
         'Framework :: Django',
     ],
 )
-
-
