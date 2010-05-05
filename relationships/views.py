@@ -33,7 +33,7 @@ def relationship_list(request, user, status_slug=None):
     if not status_slug:
         return _relationship_list(
             request,
-            user.relationships.all(),
+            user.relationships.following(),
             extra_context={'from_user': user})
     
     # get the relationship status object we're talking about
