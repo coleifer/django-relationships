@@ -48,8 +48,8 @@ class Relationship(models.Model):
         related_name='to_users', verbose_name=_('to user'))
     status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'))
     created = models.DateTimeField(_('created'), auto_now_add=True)
-    site = models.ForeignKey(Site,
-        default=settings.SITE_ID, verbose_name=_('site'))
+    site = models.ForeignKey(Site, default=settings.SITE_ID,
+        verbose_name=_('site'), related_name='relationships')
 
     class Meta:
         unique_together = (('from_user', 'to_user', 'status'),)
