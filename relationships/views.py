@@ -38,10 +38,7 @@ def relationship_list(request, user, status_slug=None):
     
     # get the relationship status object we're talking about
     try:
-        status = RelationshipStatus.objects.get(
-            Q(from_slug=status_slug) | 
-            Q(to_slug=status_slug) | 
-            Q(symmetrical_slug=status_slug))
+        status = RelationshipStatus.objects.by_slug(status_slug)
     except RelationshipStatus.DoesNotExist:
         raise Http404
     

@@ -15,6 +15,12 @@ class RelationshipStatusManager(models.Manager):
     def blocking(self):
         return self.get(from_slug='blocking')
 
+    def by_slug(self, status_slug):
+        return self.get(
+            models.Q(from_slug=status_slug) | 
+            models.Q(to_slug=status_slug) | 
+            models.Q(symmetrical_slug=status_slug))
+
 
 class RelationshipStatus(models.Model):
     name = models.CharField(_('name'), max_length=100)
