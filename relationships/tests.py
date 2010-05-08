@@ -2,32 +2,46 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
+from django.core.urlresolvers import reverse
 from django.template import Template, Context
 from django.test import TestCase
 from relationships.forms import RelationshipStatusAdminForm
 from relationships.models import Relationship, RelationshipStatus
 from relationships.utils import extract_user_field, positive_filter, negative_filter
 
-class RelationshipsTestCase(TestCase):
+class BaseRelationshipsTestCase(TestCase):
     fixtures = ['relationships.json']
     
     def setUp(self):
-        self.walrus = User.objects.get(username='The_Walrus')
-        self.john = User.objects.get(username='John')
-        self.paul = User.objects.get(username='Paul')
-        self.yoko = User.objects.get(username='Yoko')
+        self.walrus = User.objects.get(username='The_Walrus') # pk 1
+        self.john = User.objects.get(username='John') # pk 2
+        self.paul = User.objects.get(username='Paul') # pk 3
+        self.yoko = User.objects.get(username='Yoko') # pk 4
+        
+        self.following = RelationshipStatus.objects.get(from_slug='following')
+        self.blocking = RelationshipStatus.objects.get(from_slug='blocking')
         
         self.site_id = settings.SITE_ID
         settings.SITE_ID = 1
         
         self.site = Site.objects.get_current()
-        self.second_site = Site.objects.create(name='ex2.com', domain='ex2.com')
-       
+    
     def tearDown(self):
         settings.SITE_ID = self.site_id
+
+    def _sort_by_pk(self, list_or_qs):
+        annotated = [(item.pk, item) for item in list_or_qs]
+        annotated.sort()
+        return map(lambda item_tuple: item_tuple[1], annotated)
     
     def assertQuerysetEqual(self, a, b):
-        return self.assertEqual(list(a), list(b))
+        return self.assertEqual(self._sort_by_pk(a), self._sort_by_pk(b))
+
+
+class RelationshipsTestCase(BaseRelationshipsTestCase):
+    def setUp(self):
+        super(RelationshipsTestCase, self).setUp()
+        self.second_site = Site.objects.create(name='ex2.com', domain='ex2.com')
     
     def test_related_names(self):
         rel = self.walrus.relationships.all()
@@ -46,7 +60,7 @@ class RelationshipsTestCase(TestCase):
         self.assertQuerysetEqual(rel, [])
         
         rel = self.john.related_to.all()
-        self.assertQuerysetEqual(rel, [self.yoko, self.paul])
+        self.assertQuerysetEqual(rel, [self.paul, self.yoko])
 
         rel = self.paul.related_to.all()
         self.assertQuerysetEqual(rel, [self.john])
@@ -83,7 +97,7 @@ class RelationshipsTestCase(TestCase):
         self.assertQuerysetEqual(rel, [self.walrus, self.paul, self.yoko])
         
         rel = self.john.related_to.all()
-        self.assertQuerysetEqual(rel, [self.yoko, self.paul])
+        self.assertQuerysetEqual(rel, [self.paul, self.yoko])
         
         rel = self.walrus.relationships.all()
         self.assertQuerysetEqual(rel, [])
@@ -104,7 +118,7 @@ class RelationshipsTestCase(TestCase):
         self.assertQuerysetEqual(rel, [self.paul])
         
         rel = self.john.related_to.all()
-        self.assertQuerysetEqual(rel, [self.yoko, self.paul])
+        self.assertQuerysetEqual(rel, [self.paul, self.yoko])
         
         rel = self.yoko.relationships.all()
         self.assertQuerysetEqual(rel, [self.john])
@@ -200,108 +214,110 @@ class RelationshipsTestCase(TestCase):
         self.assertQuerysetEqual(self.walrus.relationships.all(), [self.john, self.paul])
 
 
-class RelationshipsViewsTestCase(TestCase):
-    fixtures = ['relationships.json']
-    
-    def setUp(self):
-        self.walrus = User.objects.get(username='The_Walrus')
-        self.john = User.objects.get(username='John')
-        self.paul = User.objects.get(username='Paul')
-        self.yoko = User.objects.get(username='Yoko')
-    
-    def assertQuerysetEqual(self, a, b):
-        return self.assertEqual(list(a), list(b))
+class RelationshipsViewsTestCase(BaseRelationshipsTestCase):
     
     def test_list_views(self):
-        resp = self.client.get('/relationships/John/')
-        self.assertEquals(resp.status_code, 200)
-        self.assertQuerysetEqual(resp.context['relationship_list'], list(self.john.relationships.all()))
+        url = reverse('relationship_list', args=['John'])
+        resp = self.client.get(url)
         
-        resp = self.client.get('/relationships/John/followers/')
         self.assertEquals(resp.status_code, 200)
-        self.assertQuerysetEqual(resp.context['relationship_list'], list(self.john.relationships.followers()))
+        self.assertQuerysetEqual(resp.context['relationship_list'], self.john.relationships.following())
         
-        resp = self.client.get('/relationships/John/following/')
+        url = reverse('relationship_list', args=['John', 'followers'])
+        resp = self.client.get(url)
         self.assertEquals(resp.status_code, 200)
-        self.assertQuerysetEqual(resp.context['relationship_list'], list(self.john.relationships.following()))
+        self.assertQuerysetEqual(resp.context['relationship_list'], self.john.relationships.followers())
         
-        resp = self.client.get('/relationships/John/friends/')
+        url = reverse('relationship_list', args=['John', 'following'])
+        resp = self.client.get(url)
         self.assertEquals(resp.status_code, 200)
-        self.assertQuerysetEqual(resp.context['relationship_list'], list(self.john.relationships.friends()))
+        self.assertQuerysetEqual(resp.context['relationship_list'], self.john.relationships.following())
         
-        resp = self.client.get('/relationships/John/blocking/')
+        url = reverse('relationship_list', args=['John', 'friends'])
+        resp = self.client.get(url)
+        self.assertEquals(resp.status_code, 200)
+        self.assertQuerysetEqual(resp.context['relationship_list'], self.john.relationships.friends())
+        
+        url = reverse('relationship_list', args=['John', 'blocking'])
+        resp = self.client.get(url)
         self.assertEqual(resp.status_code, 302)
         
         self.client.login(username='John', password='John')
-        resp = self.client.get('/relationships/John/blocking/')
-        self.assertQuerysetEqual(resp.context['relationship_list'], list(self.john.relationships.blocking()))
+        url = reverse('relationship_list', args=['John', 'blocking'])
+        resp = self.client.get(url)
+        self.assertQuerysetEqual(resp.context['relationship_list'], self.john.relationships.blocking())
         
         # this is private, only Paul can see who he's blocking
-        resp = self.client.get('/relationships/Paul/blocking/')
+        url = reverse('relationship_list', args=['Paul', 'blocking'])
+        resp = self.client.get(url)
         self.assertEqual(resp.status_code, 404)
         
-        resp = self.client.get('/relationships/John/walrus-friends/')
+        # non existant relationship status slug
+        url = reverse('relationship_list', args=['John', 'walrus-friends'])
+        resp = self.client.get(url)
         self.assertEqual(resp.status_code, 404)
         
     def test_add_remove_views(self):
         # login required
-        resp = self.client.get('/relationships/add/The_Walrus/following/')
+        url = reverse('relationship_add', args=['The_Walrus', 'following'])
+        resp = self.client.get(url)
         self.assertEqual(resp.status_code, 302)
         
-        resp = self.client.get('/relationships/remove/The_Walrus/following/')
+        url = reverse('relationship_remove', args=['The_Walrus', 'following'])
+        resp = self.client.get(url)
         self.assertEqual(resp.status_code, 302)
         
         self.client.login(username='John', password='John')
-        resp = self.client.get('/relationships/add/The_Walrus/following/')
+        url = reverse('relationship_add', args=['The_Walrus', 'following'])
+        resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         
-        resp = self.client.get('/relationships/remove/The_Walrus/following/')
+        url = reverse('relationship_remove', args=['The_Walrus', 'following'])
+        resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         
-        resp = self.client.post('/relationships/add/The_Walrus/following/')
+        url = reverse('relationship_add', args=['The_Walrus', 'following'])
+        resp = self.client.post(url)
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(self.john.relationships.exists(self.walrus, 1))
         
-        resp = self.client.post('/relationships/remove/The_Walrus/following/')
+        url = reverse('relationship_remove', args=['The_Walrus', 'following'])
+        resp = self.client.post(url)
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(self.john.relationships.exists(self.walrus, 1))
         
-        resp = self.client.post('/relationships/add/Nobody/following/')
+        url = reverse('relationship_add', args=['Nobody', 'following'])
+        resp = self.client.get(url)
         self.assertEqual(resp.status_code, 404)
 
 
-class RelationshipsTagsTestCase(TestCase):
-    fixtures = ['relationships.json']
-    
-    def setUp(self):
-        self.walrus = User.objects.get(username='The_Walrus')
-        self.john = User.objects.get(username='John')
-        self.paul = User.objects.get(username='Paul')
-        self.yoko = User.objects.get(username='Yoko')
-        self.following = RelationshipStatus.objects.get(from_slug='following')
-        self.blocking = RelationshipStatus.objects.get(from_slug='blocking')
-    
+class RelationshipsTagsTestCase(BaseRelationshipsTestCase):
     def test_add_url_filter(self):
         t = Template('{% load relationship_tags %}{{ user|add_relationship_url:"following" }}')
         c = Context({'user': self.paul})
+        
         rendered = t.render(c)
-        self.assertEqual(rendered, '/relationships/add/Paul/following/')
+        url = reverse('relationship_add', args=['Paul', 'following'])
+        self.assertEqual(rendered, url)
         
         t = Template('{% load relationship_tags %}{{ user|add_relationship_url:blocking }}')
         c = Context({'user': self.paul, 'blocking': self.blocking})
         rendered = t.render(c)
-        self.assertEqual(rendered, '/relationships/add/Paul/blocking/')
+        url = reverse('relationship_add', args=['Paul', 'blocking'])
+        self.assertEqual(rendered, url)
     
     def test_remove_url_filter(self):
         t = Template('{% load relationship_tags %}{{ user|remove_relationship_url:"following" }}')
         c = Context({'user': self.paul})
         rendered = t.render(c)
-        self.assertEqual(rendered, '/relationships/remove/Paul/following/')
+        url = reverse('relationship_remove', args=['Paul', 'following'])
+        self.assertEqual(rendered, url)
         
         t = Template('{% load relationship_tags %}{{ user|remove_relationship_url:blocking }}')
         c = Context({'user': self.paul, 'blocking': self.blocking})
         rendered = t.render(c)
-        self.assertEqual(rendered, '/relationships/remove/Paul/blocking/')
+        url = reverse('relationship_remove', args=['Paul', 'blocking'])
+        self.assertEqual(rendered, url)
     
     def test_if_relationship_tag(self):
         t = Template('{% load relationship_tags %}{% if_relationship john paul "following" %}y{% else %}n{% endif_relationship %}')
@@ -345,39 +361,41 @@ class RelationshipsTagsTestCase(TestCase):
 
         self.yoko.groups.add(john_yoko)
         self.yoko.groups.add(characters)
+        
+        group_qs = Group.objects.all().order_by('name')
 
         # john is friends w/ yoko so show yoko's groups
         t = Template('{% load relationship_tags %}{% for group in qs|friend_content:user %}{{ group.name }}|{% endfor %}')
-        c = Context({'user': self.john, 'qs': Group.objects.all()})
+        c = Context({'user': self.john, 'qs': group_qs})
         rendered = t.render(c)
-        self.assertEqual(rendered, 'john_yoko|characters|')
+        self.assertEqual(rendered, 'characters|john_yoko|')
 
         # paul is friends w/ nobody, so no groups
-        c = Context({'user': self.paul, 'qs': Group.objects.all()})
+        c = Context({'user': self.paul, 'qs': group_qs})
         rendered = t.render(c)
         self.assertEqual(rendered, '')
 
         # john is following paul & yoko
         t = Template('{% load relationship_tags %}{% for group in qs|following_content:user %}{{ group.name }}|{% endfor %}')
-        c = Context({'user': self.john, 'qs': Group.objects.all()})
+        c = Context({'user': self.john, 'qs': group_qs})
         rendered = t.render(c)
-        self.assertEqual(rendered, 'beatles|john_yoko|characters|')
+        self.assertEqual(rendered, 'beatles|characters|john_yoko|')
 
         # yoko is followed by john
         t = Template('{% load relationship_tags %}{% for group in qs|followers_content:user %}{{ group.name }}|{% endfor %}')
-        c = Context({'user': self.yoko, 'qs': Group.objects.all()})
+        c = Context({'user': self.yoko, 'qs': group_qs})
         rendered = t.render(c)
         self.assertEqual(rendered, 'beatles|john_yoko|')
 
         # paul is blocking john, so every group but ones with him
         t = Template('{% load relationship_tags %}{% for group in qs|unblocked_content:user %}{{ group.name }}|{% endfor %}')
-        c = Context({'user': self.paul, 'qs': Group.objects.all()})
+        c = Context({'user': self.paul, 'qs': group_qs})
         rendered = t.render(c)
         self.assertEqual(rendered, 'characters|')
 
         # oh no, john is blocking yoko
         self.john.relationships.add(self.yoko, RelationshipStatus.objects.blocking())
-        c = Context({'user': self.john, 'qs': Group.objects.all()})
+        c = Context({'user': self.john, 'qs': group_qs})
         rendered = t.render(c)
         self.assertEqual(rendered, 'beatles|')
 
@@ -389,17 +407,7 @@ class RelationshipsTagsTestCase(TestCase):
         
         
 
-class RelationshipStatusAdminFormTestCase(TestCase):
-    fixtures = ['relationships.json']
-
-    def setUp(self):
-        self.walrus = User.objects.get(username='The_Walrus')
-        self.john = User.objects.get(username='John')
-        self.paul = User.objects.get(username='Paul')
-        self.yoko = User.objects.get(username='Yoko')
-        self.following = RelationshipStatus.objects.get(from_slug='following')
-        self.blocking = RelationshipStatus.objects.get(from_slug='blocking')
-
+class RelationshipStatusAdminFormTestCase(BaseRelationshipsTestCase):
     def test_no_dupes(self):
         payload = {
             'name': 'Testing',
@@ -453,18 +461,7 @@ class RelationshipStatusAdminFormTestCase(TestCase):
         self.assertTrue('from_slug' in form.errors)
 
 
-class RelationshipUtilsTestCase(TestCase):
-    fixtures = ['relationships.json']
-    
-    def setUp(self):
-        self.walrus = User.objects.get(username='The_Walrus')
-        self.john = User.objects.get(username='John')
-        self.paul = User.objects.get(username='Paul')
-        self.yoko = User.objects.get(username='Yoko')
-
-    def assertQuerysetEqual(self, a, b):
-        return self.assertEqual(list(a), list(b))
-        
+class RelationshipUtilsTestCase(BaseRelationshipsTestCase):
     def test_extract_user_field(self):
         # just test a known pass and known fail
         from django.contrib.comments.models import Comment
@@ -492,40 +489,54 @@ class RelationshipUtilsTestCase(TestCase):
 
         self.yoko.groups.add(john_yoko)
         self.yoko.groups.add(characters)
+        
+        group_qs = Group.objects.all().order_by('name')
 
         # groups people paul follows are in (nobody)
-        paul_following_groups = positive_filter(Group.objects.all(),
-            self.paul.relationships.following(), 'user')
+        paul_following_groups = positive_filter(
+            group_qs,
+            self.paul.relationships.following(),
+            'user')
         self.assertQuerysetEqual(paul_following_groups, [])
 
         # when paul follows john he will see john's groups
         self.paul.relationships.add(self.john, following)
-        paul_following_groups = positive_filter(Group.objects.all(),
-            self.paul.relationships.following(), 'user')
+        paul_following_groups = positive_filter(
+            group_qs,
+            self.paul.relationships.following(),
+            'user')
         self.assertQuerysetEqual(paul_following_groups, [beatles, john_yoko])
 
         # now john's + walrus's
         self.paul.relationships.add(self.walrus, following)
-        paul_following_groups = positive_filter(Group.objects.all(),
-            self.paul.relationships.following(), 'user')
-        self.assertQuerysetEqual(paul_following_groups, [beatles, john_yoko, characters])
+        paul_following_groups = positive_filter(
+            group_qs,
+            self.paul.relationships.following(),
+            'user')
+        self.assertQuerysetEqual(paul_following_groups, [beatles, characters, john_yoko])
 
         # everybody's - distinct groups, no dupes
         self.paul.relationships.add(self.yoko, following)
-        paul_following_groups = positive_filter(Group.objects.all(),
-            self.paul.relationships.following(), 'user')
-        self.assertQuerysetEqual(paul_following_groups, [beatles, john_yoko, characters])
+        paul_following_groups = positive_filter(
+            group_qs,
+            self.paul.relationships.following(),
+            'user')
+        self.assertQuerysetEqual(paul_following_groups, [beatles, characters, john_yoko])
 
         # just groups walrus & yoko are in
         self.paul.relationships.remove(self.john, following)
-        paul_following_groups = positive_filter(Group.objects.all(),
-            self.paul.relationships.following(), 'user')
-        self.assertQuerysetEqual(paul_following_groups, [john_yoko, characters])
+        paul_following_groups = positive_filter(
+            group_qs,
+            self.paul.relationships.following(),
+            'user')
+        self.assertQuerysetEqual(paul_following_groups, [characters, john_yoko])
 
         # just walrus' groups
         self.paul.relationships.remove(self.yoko)
-        paul_following_groups = positive_filter(Group.objects.all(),
-            self.paul.relationships.following(), 'user')
+        paul_following_groups = positive_filter(
+            group_qs,
+            self.paul.relationships.following(),
+            'user')
         self.assertQuerysetEqual(paul_following_groups, [characters])
         
         self.paul.relationships.remove(self.walrus)
@@ -549,39 +560,53 @@ class RelationshipUtilsTestCase(TestCase):
 
         self.yoko.groups.add(john_yoko)
         self.yoko.groups.add(characters)
+        
+        group_qs = Group.objects.all().order_by('name')
 
         # groups people paul blocks are *not* in (yoko & walrus)
         # since john is in the john_yoko group, just characters will show up
-        paul_blocking_groups = negative_filter(Group.objects.all(), 
-            self.paul.relationships.blocking(), 'user')
+        paul_blocking_groups = negative_filter(
+            group_qs, 
+            self.paul.relationships.blocking(),
+            'user')
         self.assertQuerysetEqual(paul_blocking_groups, [characters])
 
         # block yoko and no groups
         self.paul.relationships.add(self.yoko, blocking)
-        paul_blocking_groups = negative_filter(Group.objects.all(),
-            self.paul.relationships.blocking(), 'user')
+        paul_blocking_groups = negative_filter(
+            group_qs,
+            self.paul.relationships.blocking(),
+            'user')
         self.assertQuerysetEqual(paul_blocking_groups, [])
 
         # block walrus - everyone is blocked, no groups
         self.paul.relationships.add(self.walrus, blocking)
-        paul_blocking_groups = negative_filter(Group.objects.all(),
-            self.paul.relationships.blocking(), 'user')
+        paul_blocking_groups = negative_filter(
+            group_qs,
+            self.paul.relationships.blocking(),
+            'user')
         self.assertQuerysetEqual(paul_blocking_groups, [])
 
         # unblock john and we'll get beatles
         self.paul.relationships.remove(self.john, blocking)
-        paul_blocking_groups = negative_filter(Group.objects.all(),
-            self.paul.relationships.blocking(), 'user')
+        paul_blocking_groups = negative_filter(
+            group_qs,
+            self.paul.relationships.blocking(),
+            'user')
         self.assertQuerysetEqual(paul_blocking_groups, [beatles])
 
         # unblock yoko
         self.paul.relationships.remove(self.yoko, blocking)
-        paul_blocking_groups = negative_filter(Group.objects.all(),
-            self.paul.relationships.blocking(), 'user')
+        paul_blocking_groups = negative_filter(
+            group_qs,
+            self.paul.relationships.blocking(),
+            'user')
         self.assertQuerysetEqual(paul_blocking_groups, [beatles, john_yoko])
 
         # unblock walrus and we have them all
         self.paul.relationships.remove(self.walrus, blocking)
-        paul_blocking_groups = negative_filter(Group.objects.all(),
-            self.paul.relationships.blocking(), 'user')
-        self.assertQuerysetEqual(paul_blocking_groups, [beatles, john_yoko, characters])
+        paul_blocking_groups = negative_filter(
+            group_qs,
+            self.paul.relationships.blocking(),
+            'user')
+        self.assertQuerysetEqual(paul_blocking_groups, [beatles, characters, john_yoko])
