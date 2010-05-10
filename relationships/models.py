@@ -117,6 +117,16 @@ class RelationshipManager(User._default_manager.__class__):
             from_users__to_user=self.instance,
             from_users__site__pk=settings.SITE_ID)
     
+    def only_to(self, status):
+        from_relationships = self.get_relationships(status)
+        to_relationships = self.get_related_to(status)
+        return to_relationships.exclude(pk__in=from_relationships.values_list('pk'))
+    
+    def only_from(self, status):
+        from_relationships = self.get_relationships(status)
+        to_relationships = self.get_related_to(status)
+        return from_relationships.exclude(pk__in=to_relationships.values_list('pk'))
+    
     def exists(self, user, status=None):
         query = {'to_users__from_user': self.instance,
                  'to_users__to_user': user,

@@ -192,6 +192,13 @@ class RelationshipsTestCase(BaseRelationshipsTestCase):
         self.assertTrue(self.yoko.relationships.symmetrical_exists(self.john, 1))
         self.assertFalse(self.yoko.relationships.symmetrical_exists(self.paul, 1))
         self.assertFalse(self.yoko.relationships.symmetrical_exists(self.walrus, 1))
+
+    def test_oneway_methods(self):
+        self.assertQuerysetEqual(self.john.relationships.only_from(self.following), [self.paul])
+        self.assertQuerysetEqual(self.john.relationships.only_to(self.following), [])
+        
+        self.assertQuerysetEqual(self.john.relationships.only_from(self.blocking), [])
+        self.assertQuerysetEqual(self.john.relationships.only_to(self.blocking), [self.paul])
     
     def test_site_behavior(self):
         # relationships are site-dependent
