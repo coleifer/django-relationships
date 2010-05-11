@@ -32,11 +32,7 @@ def _relationship_list(request, queryset, template_name=None, *args, **kwargs):
 def relationship_list(request, user, status_slug=None,
                       template_name='relationships/relationship_list.html'):
     if not status_slug:
-        return _relationship_list(
-            request,
-            user.relationships.following(),
-            template_name,
-            extra_context={'from_user': user})
+        status_slug = RelationshipStatus.objects.following().from_slug
     
     # get the relationship status object we're talking about
     try:
