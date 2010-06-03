@@ -17,24 +17,22 @@ from relationships.models import Relationship, RelationshipStatus
 def relationship_redirect(request):
     return HttpResponseRedirect(reverse('relationship_list', args=[request.user.username]))
 
-def _relationship_list(request, queryset, *args, **kwargs):
+def _relationship_list(request, queryset, template_name=None, *args, **kwargs):
     return object_list(
         request=request,
         queryset=queryset,
         paginate_by=20,
         page=int(request.GET.get('page', 0)),
         template_object_name='relationship',
-        template_name='relationships/relationship_list.html',
+        template_name=template_name,
         *args,
         **kwargs)
 
 @require_user
-def relationship_list(request, user, status_slug=None):
+def relationship_list(request, user, status_slug=None,
+                      template_name='relationships/relationship_list.html'):
     if not status_slug:
-        return _relationship_list(
-            request,
-            user.relationships.following(),
-            extra_context={'from_user': user})
+        status_slug = RelationshipStatus.objects.following().from_slug
     
     # get the relationship status object we're talking about
     try:
@@ -57,7 +55,7 @@ def relationship_list(request, user, status_slug=None):
         qs = user.relationships.get_related_to(status=status)
     else:
         qs = user.relationships.get_symmetrical(status=status)
-    return _relationship_list(request, qs, extra_context={
+    return _relationship_list(request, qs, template_name, extra_context={
         'from_user': user, 'status': status, 'status_slug': status_slug})
 
 @login_required
