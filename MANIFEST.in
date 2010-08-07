@@ -4,3 +4,4 @@ include TODO.rst
 recursive-include relationships/fixtures *.json
 recursive-include relationships/locale *.po *.mo
 recursive-include relationships/templates *.html
+recursive-include relationships/tests/fixtures *.json
