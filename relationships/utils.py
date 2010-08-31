@@ -1,5 +1,17 @@
 from django.contrib.auth.models import User
 
+from relationships.models import RelationshipStatus
+
+
+def relationship_exists(from_user, to_user, status_slug='following'):
+    status = RelationshipStatus.objects.by_slug(status_slug)
+    if status.from_slug == status_slug:
+        return from_user.relationships.exists(to_user, status)
+    elif status.to_slug == status_slug:
+        return to_user.relationships.exists(from_user, status)
+    else:
+        return from_user.relationships.symmetrical_exists(to_user, status)
+
 def extract_user_field(model):
     for field in model._meta.fields + model._meta.many_to_many:
         if field.rel and field.rel.to == User:

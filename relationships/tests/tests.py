@@ -5,11 +5,24 @@ from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
 from django.template import Template, Context
 from django.test import TestCase
+
 from relationships.forms import RelationshipStatusAdminForm
 from relationships.models import Relationship, RelationshipStatus
-from relationships.utils import extract_user_field, positive_filter, negative_filter
+from relationships.utils import (relationship_exists, extract_user_field,
+    positive_filter, negative_filter)
 
 class BaseRelationshipsTestCase(TestCase):
+    """
+    The fixture data defines:
+    
+    - 4 users, The Walrus, John, Paul and Yoko
+    - 2 relationship status, Following & Blocking
+    - 4 relationships
+        - John is following Yoko
+        - John is following Paul
+        - Yoko is following John
+        - Paul is blocking John
+    """
     fixtures = ['relationships.json']
     
     def setUp(self):
@@ -617,3 +630,23 @@ class RelationshipUtilsTestCase(BaseRelationshipsTestCase):
             self.paul.relationships.blocking(),
             'user')
         self.assertQuerysetEqual(paul_blocking_groups, [beatles, characters, john_yoko])
+    
+    def test_relationship_exists(self):
+        self.assertTrue(relationship_exists(self.john, self.yoko, 'following'))
+        self.assertTrue(relationship_exists(self.john, self.yoko, 'followers'))
+        self.assertTrue(relationship_exists(self.john, self.yoko, 'friends'))
+        
+        self.assertTrue(relationship_exists(self.yoko, self.john, 'following'))
+        self.assertTrue(relationship_exists(self.yoko, self.john, 'followers'))
+        self.assertTrue(relationship_exists(self.yoko, self.john, 'friends'))
+        
+        self.assertTrue(relationship_exists(self.john, self.paul, 'following'))
+        self.assertFalse(relationship_exists(self.john, self.paul, 'followers'))
+        self.assertFalse(relationship_exists(self.john, self.paul, 'friends'))
+        
+        self.assertFalse(relationship_exists(self.paul, self.john, 'following'))
+        self.assertTrue(relationship_exists(self.paul, self.john, 'followers'))
+        self.assertFalse(relationship_exists(self.paul, self.john, 'friends'))
+        
+        self.assertTrue(relationship_exists(self.paul, self.john, 'blocking'))
+        self.assertFalse(relationship_exists(self.paul, self.john, 'blockers'))
