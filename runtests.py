@@ -4,9 +4,18 @@ from os.path import dirname, abspath
 
 from django.conf import settings
 
+if len(sys.argv) > 1 and 'postgres' in sys.argv:
+    sys.argv.remove('postgres')
+    db_engine = 'postgresql_psycopg2'
+    db_name = 'test_main'
+else:
+    db_engine = 'sqlite3'
+    db_name = ''
+
 if not settings.configured:
     settings.configure(
-        DATABASE_ENGINE = 'sqlite3',
+        DATABASE_ENGINE = db_engine,
+        DATABASE_NAME = db_name,
         SITE_ID = 1,
         TEMPLATE_LOADERS = (
             'django.template.loaders.filesystem.load_template_source',
