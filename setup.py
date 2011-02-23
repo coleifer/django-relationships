@@ -22,7 +22,7 @@ setup(
             'templates/*.html',
             'templates/*/*.html',
             'locale/*/LC_MESSAGES/*',
-            'tests/fixtures/*.json',
+            'relationships_tests/fixtures/*.json',
         ],
     },
     classifiers=[
