@@ -22,7 +22,10 @@ class IfRelationshipNode(template.Node):
     def render(self, context):
         from_user = template.resolve_variable(self.from_user, context)
         to_user = template.resolve_variable(self.to_user, context)
-        
+
+        if from_user.is_anonymous() or to_user.is_anonymous():
+            return self.nodelist_false.render(context)
+
         try:
             status = RelationshipStatus.objects.get(
                 Q(from_slug=self.status) | 
