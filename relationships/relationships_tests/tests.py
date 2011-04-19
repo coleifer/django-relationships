@@ -7,9 +7,12 @@ from django.template import Template, Context
 from django.test import TestCase
 
 from relationships.forms import RelationshipStatusAdminForm
+from relationships.listeners import (attach_relationship_listener,
+    detach_relationship_listener)
 from relationships.models import Relationship, RelationshipStatus
 from relationships.utils import (relationship_exists, extract_user_field,
     positive_filter, negative_filter)
+
 
 class BaseRelationshipsTestCase(TestCase):
     """
@@ -53,7 +56,7 @@ class BaseRelationshipsTestCase(TestCase):
 
 class RelationshipsTestCase(BaseRelationshipsTestCase):
     def setUp(self):
-        super(RelationshipsTestCase, self).setUp()
+        BaseRelationshipsTestCase.setUp(self)
         self.second_site = Site.objects.create(name='ex2.com', domain='ex2.com')
     
     def test_related_names(self):
@@ -232,6 +235,53 @@ class RelationshipsTestCase(BaseRelationshipsTestCase):
         # remove only works on the current site, so paul will *NOT* be removed
         self.walrus.relationships.remove(self.paul)
         self.assertQuerysetEqual(self.walrus.relationships.all(), [self.john, self.paul])
+
+
+class RelationshipsListenersTestCase(BaseRelationshipsTestCase):
+    def setUp(self):
+        BaseRelationshipsTestCase.setUp(self)
+        attach_relationship_listener()
+
+    def tearDown(self):
+        detach_relationship_listener()
+        BaseRelationshipsTestCase.tearDown(self)
+
+    def test_following_and_blocking(self):
+        # check initial state, john is following paul & yoko
+        self.assertQuerysetEqual(self.john.relationships.following(), [self.paul, self.yoko])
+
+        # when john blocks paul, his 'following' relationship will be deleted
+        self.john.relationships.add(self.paul, self.blocking)
+        self.assertQuerysetEqual(self.john.relationships.blocking(), [self.paul])
+        self.assertQuerysetEqual(self.john.relationships.following(), [self.yoko])
+
+        # check initial state for paul
+        self.assertQuerysetEqual(self.paul.relationships.blocking(), [self.john])
+
+        # when paul follows john his 'blocking' relationship will be deleted
+        self.paul.relationships.add(self.john, self.following)
+        self.assertQuerysetEqual(self.paul.relationships.following(), [self.john])
+        self.assertQuerysetEqual(self.paul.relationships.blocking(), [])
+
+    def test_listener_disconnecting(self):
+        # this test simply ensures the default behavior
+        detach_relationship_listener()
+
+        # have john start blocking paul
+        self.john.relationships.add(self.paul, self.blocking)
+
+        # the blocking relationship is created and the original following
+        # relationship is left intact
+        self.assertQuerysetEqual(self.john.relationships.blocking(), [self.paul])
+        self.assertQuerysetEqual(self.john.relationships.following(), [self.paul, self.yoko])
+
+        # have paul start following john
+        self.paul.relationships.add(self.john, self.following)
+
+        # the following relationship is created and the original blocking
+        # relationship is left intact
+        self.assertQuerysetEqual(self.paul.relationships.following(), [self.john])
+        self.assertQuerysetEqual(self.paul.relationships.blocking(), [self.john])
 
 
 class RelationshipsViewsTestCase(BaseRelationshipsTestCase):

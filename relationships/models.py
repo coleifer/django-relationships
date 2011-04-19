@@ -79,34 +79,40 @@ class RelationshipManager(User._default_manager.__class__):
     def add(self, user, status=None):
         if not status:
             status = RelationshipStatus.objects.following()
+
         relationship, created = Relationship.objects.get_or_create(
             from_user=self.instance,
             to_user=user,
             status=status,
-            site=Site.objects.get_current())
+            site=Site.objects.get_current()
+        )
+
         return relationship
 
     def remove(self, user, status=None):
         if not status:
             status = RelationshipStatus.objects.following()
-        Relationship.objects.filter(
+
+        return Relationship.objects.filter(
             from_user=self.instance, 
             to_user=user,
             status=status,
-            site__pk=settings.SITE_ID).delete()
-        return
+            site__pk=settings.SITE_ID
+        ).delete()
     
     def get_relationships(self, status):
         return User.objects.filter(
             to_users__from_user=self.instance,
             to_users__status=status,
-            to_users__site__pk=settings.SITE_ID)
+            to_users__site__pk=settings.SITE_ID
+        )
     
     def get_related_to(self, status):
         return User.objects.filter(
             from_users__to_user=self.instance,
             from_users__status=status,
-            from_users__site__pk=settings.SITE_ID)
+            from_users__site__pk=settings.SITE_ID
+        )
 
     def get_symmetrical(self, status):
         return User.objects.filter(
@@ -115,7 +121,8 @@ class RelationshipManager(User._default_manager.__class__):
             to_users__site__pk=settings.SITE_ID,
             from_users__status=status, 
             from_users__to_user=self.instance,
-            from_users__site__pk=settings.SITE_ID)
+            from_users__site__pk=settings.SITE_ID
+        )
     
     def only_to(self, status):
         from_relationships = self.get_relationships(status)
@@ -128,24 +135,32 @@ class RelationshipManager(User._default_manager.__class__):
         return from_relationships.exclude(pk__in=to_relationships.values_list('pk'))
     
     def exists(self, user, status=None):
-        query = {'to_users__from_user': self.instance,
-                 'to_users__to_user': user,
-                 'to_users__site__pk': settings.SITE_ID}
+        query = {
+            'to_users__from_user': self.instance,
+            'to_users__to_user': user,
+            'to_users__site__pk': settings.SITE_ID
+        }
         if status:
             query['to_users__status'] = status
+
         return User.objects.filter(**query).count() != 0
 
     def symmetrical_exists(self, user, status=None):
-        query = {'to_users__from_user': self.instance,
-                 'to_users__to_user': user,
-                 'to_users__site__pk': settings.SITE_ID,
-                 'from_users__to_user': self.instance,
-                 'from_users__from_user': user,
-                 'from_users__site__pk': settings.SITE_ID}
+        query = {
+            'to_users__from_user': self.instance,
+            'to_users__to_user': user,
+            'to_users__site__pk': settings.SITE_ID,
+            'from_users__to_user': self.instance,
+            'from_users__from_user': user,
+            'from_users__site__pk': settings.SITE_ID
+        }
+
         if status:
             query.update({
                 'to_users__status': status,
-                'from_users__status': status})
+                'from_users__status': status
+            })
+
         return User.objects.filter(**query).count() != 0
 
     # some defaults
