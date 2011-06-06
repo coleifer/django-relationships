@@ -54,6 +54,7 @@ class Relationship(models.Model):
         related_name='to_users', verbose_name=_('to user'))
     status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'))
     created = models.DateTimeField(_('created'), auto_now_add=True)
+    weight = models.FloatField(_('weight'), default=1.0, blank=True, null=True)
     site = models.ForeignKey(Site, default=settings.SITE_ID,
         verbose_name=_('site'), related_name='relationships')
 
