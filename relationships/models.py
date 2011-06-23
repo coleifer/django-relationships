@@ -19,7 +19,8 @@ class RelationshipStatusManager(models.Manager):
         return self.get(
             models.Q(from_slug=status_slug) | 
             models.Q(to_slug=status_slug) | 
-            models.Q(symmetrical_slug=status_slug))
+            models.Q(symmetrical_slug=status_slug)
+        )
 
 
 class RelationshipStatus(models.Model):

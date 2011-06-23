@@ -27,10 +27,7 @@ class IfRelationshipNode(template.Node):
             return self.nodelist_false.render(context)
 
         try:
-            status = RelationshipStatus.objects.get(
-                Q(from_slug=self.status) | 
-                Q(to_slug=self.status) | 
-                Q(symmetrical_slug=self.status))
+            status = RelationshipStatus.objects.by_slug(self.status)
         except RelationshipStatus.DoesNotExist:
             raise template.TemplateSyntaxError('RelationshipStatus not found')
         
@@ -43,6 +40,7 @@ class IfRelationshipNode(template.Node):
             
         if val:
             return self.nodelist_true.render(context)
+
         return self.nodelist_false.render(context)
 
 @register.tag
@@ -66,7 +64,7 @@ def if_relationship(parser, token):
     """
     bits = list(token.split_contents())
     if len(bits) != 4:
-        raise TemplateSyntaxError, "%r takes 3 arguments:\n" % \
+        raise TemplateSyntaxError, "%r takes 3 arguments:\n%s" % \
             (bits[0], if_relationship.__doc__)
     end_tag = 'end' + bits[0]
     nodelist_true = parser.parse(('else', end_tag))

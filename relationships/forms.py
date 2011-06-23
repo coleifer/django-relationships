@@ -10,10 +10,13 @@ class RelationshipStatusAdminForm(forms.ModelForm):
         status_qs = RelationshipStatus.objects.filter(
             Q(from_slug=status_slug) |
             Q(to_slug=status_slug) |
-            Q(symmetrical_slug=status_slug))
+            Q(symmetrical_slug=status_slug)
+        )
+
         if self.instance.pk:
             status_qs = status_qs.exclude(pk=self.instance.pk)
-        if status_qs.count() > 0:
+
+        if status_qs.exists():
             raise forms.ValidationError('"%s" slug already in use on %s' % \
                 (status_slug, unicode(status_qs[0])))
 
