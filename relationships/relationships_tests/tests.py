@@ -59,10 +59,10 @@ class RelationshipsTestCase(BaseRelationshipsTestCase):
         BaseRelationshipsTestCase.setUp(self)
         self.second_site = Site.objects.create(name='ex2.com', domain='ex2.com')
     
-    def test_related_names(self):
+    def test_manager(self):
         rel = self.walrus.relationships.all()
         self.assertQuerysetEqual(rel, [])
-    
+        
         rel = self.john.relationships.all()
         self.assertQuerysetEqual(rel, [self.paul, self.yoko])
         
@@ -71,7 +71,8 @@ class RelationshipsTestCase(BaseRelationshipsTestCase):
         
         rel = self.yoko.relationships.all()
         self.assertQuerysetEqual(rel, [self.john])
-        
+    
+    def test_related_name(self):
         rel = self.walrus.related_to.all()
         self.assertQuerysetEqual(rel, [])
         
@@ -112,12 +113,15 @@ class RelationshipsTestCase(BaseRelationshipsTestCase):
         rel = self.john.relationships.all()
         self.assertQuerysetEqual(rel, [self.walrus, self.paul, self.yoko])
         
+        # check that it wasn't added symmetrically
         rel = self.john.related_to.all()
         self.assertQuerysetEqual(rel, [self.paul, self.yoko])
         
+        # check that it doesn't show up in walrus' relationships
         rel = self.walrus.relationships.all()
         self.assertQuerysetEqual(rel, [])
         
+        # but it *does* show up in walrus' reverse relationships
         rel = self.walrus.related_to.all()
         self.assertQuerysetEqual(rel, [self.john])
         
@@ -127,12 +131,32 @@ class RelationshipsTestCase(BaseRelationshipsTestCase):
         rel = self.john.relationships.all()
         self.assertQuerysetEqual(rel, [self.walrus, self.paul, self.yoko])
     
+    def test_add_symmetrical(self):
+        _, _ = self.john.relationships.add(self.walrus, symmetrical=True)
+        
+        # should show up in john's relationships
+        rel = self.john.relationships.all()
+        self.assertQuerysetEqual(rel, [self.walrus, self.paul, self.yoko])
+        
+        # should also show up that walrus has a relationship to john
+        rel = self.john.related_to.all()
+        self.assertQuerysetEqual(rel, [self.walrus, self.paul, self.yoko])
+        
+        # and same for walrus...
+        rel = self.walrus.relationships.all()
+        self.assertQuerysetEqual(rel, [self.john])
+        
+        rel = self.walrus.related_to.all()
+        self.assertQuerysetEqual(rel, [self.john])
+    
     def test_remove_method(self):
         self.john.relationships.remove(self.yoko)
     
+        # no longer shows up in the relationships
         rel = self.john.relationships.all()
         self.assertQuerysetEqual(rel, [self.paul])
         
+        # the reverse relationship is still intact
         rel = self.john.related_to.all()
         self.assertQuerysetEqual(rel, [self.paul, self.yoko])
         
@@ -144,6 +168,21 @@ class RelationshipsTestCase(BaseRelationshipsTestCase):
         
         # no error
         self.john.relationships.remove(self.yoko)
+    
+    def test_remove_symmetrical(self):
+        self.john.relationships.remove(self.yoko, symmetrical=True)
+        
+        rel = self.john.relationships.all()
+        self.assertQuerysetEqual(rel, [self.paul])
+        
+        rel = self.john.related_to.all()
+        self.assertQuerysetEqual(rel, [self.paul])
+        
+        rel = self.yoko.relationships.all()
+        self.assertQuerysetEqual(rel, [])
+        
+        rel = self.yoko.related_to.all()
+        self.assertQuerysetEqual(rel, [])
     
     def test_custom_methods(self):
         rel = self.john.relationships.following()
@@ -176,38 +215,32 @@ class RelationshipsTestCase(BaseRelationshipsTestCase):
         
         rel = self.paul.relationships.friends()
         self.assertQuerysetEqual(rel, [])
-
-        # test exists() method
+    
+    def test_exists(self):
         self.assertTrue(self.john.relationships.exists(self.yoko))
         self.assertTrue(self.john.relationships.exists(self.paul))
-        self.assertTrue(self.yoko.relationships.exists(self.john))
-        self.assertTrue(self.paul.relationships.exists(self.john))
-
         self.assertFalse(self.john.relationships.exists(self.walrus))
-        self.assertFalse(self.walrus.relationships.exists(self.john))
+        
+        self.assertTrue(self.paul.relationships.exists(self.john))
         self.assertFalse(self.paul.relationships.exists(self.yoko))
-        self.assertFalse(self.yoko.relationships.exists(self.paul))
+        self.assertFalse(self.paul.relationships.exists(self.walrus))
+    
+    def test_exists_with_status(self):
+        self.assertTrue(self.john.relationships.exists(self.yoko, self.following))
+        self.assertTrue(self.john.relationships.exists(self.paul, self.following))
+        self.assertFalse(self.john.relationships.exists(self.walrus, self.following))
         
-        self.assertTrue(self.john.relationships.exists(self.yoko, 1))
-        self.assertTrue(self.john.relationships.exists(self.paul, 1))
-        self.assertTrue(self.yoko.relationships.exists(self.john, 1))
-        self.assertTrue(self.paul.relationships.exists(self.john, 2))
+        self.assertFalse(self.john.relationships.exists(self.yoko, self.blocking))
+        self.assertFalse(self.john.relationships.exists(self.paul, self.blocking))
+        self.assertFalse(self.john.relationships.exists(self.walrus, self.blocking))
         
-        self.assertFalse(self.john.relationships.exists(self.yoko, 2))
-        self.assertFalse(self.john.relationships.exists(self.paul, 2))
-        self.assertFalse(self.john.relationships.exists(self.walrus, 1))
-
-        self.assertFalse(self.paul.relationships.exists(self.yoko, 2))
-        self.assertFalse(self.paul.relationships.exists(self.john, 1))
-        self.assertFalse(self.paul.relationships.exists(self.walrus, 1))
-        
-        self.assertTrue(self.john.relationships.symmetrical_exists(self.yoko, 1))
-        self.assertFalse(self.john.relationships.symmetrical_exists(self.paul, 1))
-        self.assertFalse(self.john.relationships.symmetrical_exists(self.walrus, 1))
-        
-        self.assertTrue(self.yoko.relationships.symmetrical_exists(self.john, 1))
-        self.assertFalse(self.yoko.relationships.symmetrical_exists(self.paul, 1))
-        self.assertFalse(self.yoko.relationships.symmetrical_exists(self.walrus, 1))
+        self.assertFalse(self.paul.relationships.exists(self.john, self.following))
+        self.assertFalse(self.paul.relationships.exists(self.yoko, self.following))
+        self.assertFalse(self.paul.relationships.exists(self.walrus, self.following))
+    
+        self.assertTrue(self.paul.relationships.exists(self.john, self.blocking))
+        self.assertFalse(self.paul.relationships.exists(self.yoko, self.blocking))
+        self.assertFalse(self.paul.relationships.exists(self.walrus, self.blocking))
 
     def test_oneway_methods(self):
         self.assertQuerysetEqual(self.john.relationships.only_from(self.following), [self.paul])
@@ -222,14 +255,19 @@ class RelationshipsTestCase(BaseRelationshipsTestCase):
         # walrus is now following John on the current site
         self.walrus.relationships.add(self.john)
         
+        # walrus is now following Paul on another site
         status = RelationshipStatus.objects.following()
         r, _ = Relationship.objects.get_or_create(
             from_user=self.walrus,
             to_user=self.paul,
             site=self.second_site,
-            status=status)
+            status=status,
+        )
 
+        # the 'following' method is siteified
         self.assertQuerysetEqual(self.walrus.relationships.following(), [self.john])
+        
+        # ... the .all() method is not
         self.assertQuerysetEqual(self.walrus.relationships.all(), [self.john, self.paul])
         
         # remove only works on the current site, so paul will *NOT* be removed
@@ -285,7 +323,6 @@ class RelationshipsListenersTestCase(BaseRelationshipsTestCase):
 
 
 class RelationshipsViewsTestCase(BaseRelationshipsTestCase):
-    
     def test_list_views(self):
         url = reverse('relationship_list', args=['John'])
         resp = self.client.get(url)
@@ -327,7 +364,7 @@ class RelationshipsViewsTestCase(BaseRelationshipsTestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 404)
         
-    def test_add_remove_views(self):
+    def test_add_remove_login_required(self):
         # login required
         url = reverse('relationship_add', args=['The_Walrus', 'following'])
         resp = self.client.get(url)
@@ -336,29 +373,83 @@ class RelationshipsViewsTestCase(BaseRelationshipsTestCase):
         url = reverse('relationship_remove', args=['The_Walrus', 'following'])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 302)
-        
+    
+    def test_add_remove_requires_post(self):
         self.client.login(username='John', password='John')
+        
         url = reverse('relationship_add', args=['The_Walrus', 'following'])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         
-        url = reverse('relationship_remove', args=['The_Walrus', 'following'])
+        # a relationship has not been created yet
+        self.assertFalse(self.john.relationships.exists(self.walrus, self.following))
+        
+        url = reverse('relationship_remove', args=['Yoko', 'following'])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
+        
+        # the relationship has not been removed
+        self.assertTrue(self.john.relationships.exists(self.yoko, self.following))
+    
+    def test_adding(self):
+        self.client.login(username='John', password='John')
         
         url = reverse('relationship_add', args=['The_Walrus', 'following'])
         resp = self.client.post(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertTrue(self.john.relationships.exists(self.walrus, 1))
         
-        url = reverse('relationship_remove', args=['The_Walrus', 'following'])
-        resp = self.client.post(url)
-        self.assertEqual(resp.status_code, 200)
-        self.assertFalse(self.john.relationships.exists(self.walrus, 1))
+        # the relationship has been created
+        self.assertTrue(self.john.relationships.exists(self.walrus, self.following))
         
+        # the relationship is not symmetrical, though
+        self.assertFalse(self.walrus.relationships.exists(self.john, self.following))
+        
+        # a nonexistant user causes a 404
         url = reverse('relationship_add', args=['Nobody', 'following'])
-        resp = self.client.get(url)
+        resp = self.client.post(url)
         self.assertEqual(resp.status_code, 404)
+    
+    def test_adding_symm(self):
+        self.client.login(username='John', password='John')
+        
+        url = reverse('relationship_add', args=['The_Walrus', 'friends'])
+        resp = self.client.post(url)
+        self.assertEqual(resp.status_code, 200)
+        
+        # the relationship has been created
+        self.assertTrue(self.john.relationships.exists(self.walrus, self.following))
+        
+        # the relationship is symmetrical
+        self.assertTrue(self.walrus.relationships.exists(self.john, self.following))
+    
+    def test_removing(self):
+        self.client.login(username='John', password='John')
+        
+        url = reverse('relationship_remove', args=['Yoko', 'following'])
+        resp = self.client.post(url)
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertFalse(self.john.relationships.exists(self.yoko, self.following))
+        
+        # the symmetrical relationship was not removed
+        self.assertTrue(self.yoko.relationships.exists(self.john, self.following))
+        
+        # non existant user causes a 404
+        url = reverse('relationship_remove', args=['Nobody', 'following'])
+        resp = self.client.post(url)
+        self.assertEqual(resp.status_code, 404)
+    
+    def test_removing_symm(self):
+        self.client.login(username='John', password='John')
+        
+        url = reverse('relationship_remove', args=['Yoko', 'friends'])
+        resp = self.client.post(url)
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertFalse(self.john.relationships.exists(self.yoko, self.following))
+        
+        # the symmetrical relationship was not removed
+        self.assertFalse(self.yoko.relationships.exists(self.john, self.following))
 
 
 class RelationshipsTagsTestCase(BaseRelationshipsTestCase):
@@ -368,6 +459,14 @@ class RelationshipsTagsTestCase(BaseRelationshipsTestCase):
         
         rendered = t.render(c)
         url = reverse('relationship_add', args=['Paul', 'following'])
+        self.assertEqual(rendered, url)
+        
+        # check that a symmetrical slug can be used
+        t = Template('{% load relationship_tags %}{{ user|add_relationship_url:"friends" }}')
+        c = Context({'user': self.paul})
+        
+        rendered = t.render(c)
+        url = reverse('relationship_add', args=['Paul', 'friends'])
         self.assertEqual(rendered, url)
         
         t = Template('{% load relationship_tags %}{{ user|add_relationship_url:blocking }}')
@@ -381,6 +480,14 @@ class RelationshipsTagsTestCase(BaseRelationshipsTestCase):
         c = Context({'user': self.paul})
         rendered = t.render(c)
         url = reverse('relationship_remove', args=['Paul', 'following'])
+        self.assertEqual(rendered, url)
+        
+        # check that a symmetrical slug can be used
+        t = Template('{% load relationship_tags %}{{ user|remove_relationship_url:"friends" }}')
+        c = Context({'user': self.paul})
+        
+        rendered = t.render(c)
+        url = reverse('relationship_remove', args=['Paul', 'friends'])
         self.assertEqual(rendered, url)
         
         t = Template('{% load relationship_tags %}{{ user|remove_relationship_url:blocking }}')
