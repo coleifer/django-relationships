@@ -35,8 +35,10 @@ class RelationshipStatusAdminForm(forms.ModelForm):
     def clean(self):
         if self.errors:
             return self.cleaned_data
+        
         if self.cleaned_data['from_slug'] == self.cleaned_data['to_slug'] or \
            self.cleaned_data['to_slug'] == self.cleaned_data['symmetrical_slug'] or \
            self.cleaned_data['symmetrical_slug'] == self.cleaned_data['from_slug']:
-            raise forms.ValidationError('from, to, and symmetrical slugs cannot be the same')
+            raise forms.ValidationError('from, to, and symmetrical slugs must be different')
+        
         return self.cleaned_data

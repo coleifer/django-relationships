@@ -36,7 +36,7 @@ class IfRelationshipNode(template.Node):
         elif status.to_slug == self.status:
             val = to_user.relationships.exists(from_user, status)
         else:
-            val = from_user.relationships.symmetrical_exists(to_user, status)
+            val = from_user.relationships.exists(to_user, status, symmetrical=True)
             
         if val:
             return self.nodelist_true.render(context)
@@ -82,10 +82,11 @@ def add_relationship_url(user, status):
     """
     Generate a url for adding a relationship on a given user.  ``user`` is a
     User object, and ``status`` is either a relationship_status object or a 
-    string matching the ``from_slug`` of a RelationshipStatus
+    string denoting a RelationshipStatus
     
-    Usage:
-    href="{{ user|add_relationship_url:"following" }}"
+    Usage::
+    
+        href="{{ user|add_relationship_url:"following" }}"
     """
     if isinstance(status, RelationshipStatus):
         status = status.from_slug
@@ -97,10 +98,11 @@ def remove_relationship_url(user, status):
     """
     Generate a url for removing a relationship on a given user.  ``user`` is a
     User object, and ``status`` is either a relationship_status object or a 
-    string matching the ``from_slug`` of a RelationshipStatus
+    string denoting a RelationshipStatus
     
-    Usage:
-    href="{{ user|remove_relationship_url:"following" }}"
+    Usage::
+    
+        href="{{ user|remove_relationship_url:"following" }}"
     """
     if isinstance(status, RelationshipStatus):
         status = status.from_slug

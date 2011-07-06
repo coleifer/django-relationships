@@ -10,7 +10,7 @@ def relationship_exists(from_user, to_user, status_slug='following'):
     elif status.to_slug == status_slug:
         return to_user.relationships.exists(from_user, status)
     else:
-        return from_user.relationships.symmetrical_exists(to_user, status)
+        return from_user.relationships.exists(to_user, status, True)
 
 def extract_user_field(model):
     for field in model._meta.fields + model._meta.many_to_many:
@@ -29,8 +29,7 @@ def positive_filter(qs, user_qs, user_lookup=None):
 
     query = {'%s__in' % user_lookup: user_qs}
 
-    qs = qs.filter(**query).distinct()
-    return qs
+    return qs.filter(**query).distinct()
 
 def negative_filter(qs, user_qs, user_lookup=None):
     if not user_lookup:
@@ -41,5 +40,4 @@ def negative_filter(qs, user_qs, user_lookup=None):
 
     query = {'%s__in' % user_lookup: user_qs}
 
-    qs = qs.exclude(**query).distinct()
-    return qs
+    return qs.exclude(**query).distinct()
