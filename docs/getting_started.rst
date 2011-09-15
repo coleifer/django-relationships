@@ -96,7 +96,7 @@ in your ``ROOT_URLCONF``::
 
     urlpatterns = patterns('',
         ...
-        url(r'^relationships/', include('relationships.urls)),
+        url(r'^relationships/', include('relationships.urls')),
         ...
     )
 
