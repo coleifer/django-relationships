@@ -239,7 +239,7 @@ if django.VERSION < (1, 2):
             )
             return manager
 
-else:
+elif django.VERSION > (1, 2) and django.VERSION < (1, 4):
     
     fake_rel = ManyToManyRel(
         to=User,
@@ -252,6 +252,26 @@ else:
             manager = RelatedManager(
                 model=User,
                 core_filters={'related_to__pk': instance._get_pk_val()},
+                instance=instance,
+                symmetrical=False,
+                source_field_name='from_user',
+                target_field_name='to_user'
+            )
+            return manager
+    
+else:
+    
+    fake_rel = ManyToManyRel(
+        to=User,
+        through=Relationship)
+    
+    RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
+    
+    class RelationshipsDescriptor(object):
+        def __get__(self, instance, instance_type=None):
+            manager = RelatedManager(
+                model=User,
+                query_field_name='related_to__pk',
                 instance=instance,
                 symmetrical=False,
                 source_field_name='from_user',
