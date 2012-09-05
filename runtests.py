@@ -14,13 +14,20 @@ else:
     db_name = ''
 
 if not settings.configured:
+    if django.VERSION < (1, 4):
+        tl = (
+            'django.template.loaders.filesystem.load_template_source',
+            'django.template.loaders.app_directories.load_template_source',
+        )
+    else:
+        tl = (
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        )
     settings.configure(
         DATABASES=dict(default=dict(ENGINE=db_engine, NAME=db_name)),
         SITE_ID = 1,
-        TEMPLATE_LOADERS = (
-            'django.template.loaders.filesystem.load_template_source',
-            'django.template.loaders.app_directories.load_template_source',
-        ),
+        TEMPLATE_LOADERS = tl,
         MIDDLEWARE_CLASSES = (
             'django.middleware.common.CommonMiddleware',
             'django.contrib.sessions.middleware.SessionMiddleware',
