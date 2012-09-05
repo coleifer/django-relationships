@@ -271,7 +271,7 @@ else:
         def __get__(self, instance, instance_type=None):
             manager = RelatedManager(
                 model=User,
-                query_field_name='related_to__pk',
+                query_field_name='related_to',
                 instance=instance,
                 symmetrical=False,
                 source_field_name='from_user',
