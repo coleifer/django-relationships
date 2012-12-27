@@ -1,22 +1,19 @@
 # encoding: utf-8
-import datetime
 from south.db import db
 from south.v2 import SchemaMigration
-from django.db import models
+
 
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        
+
         # Adding field 'Relationship.weight'
         db.add_column('relationships_relationship', 'weight', self.gf('django.db.models.fields.FloatField')(default=1.0, null=True, blank=True), keep_default=False)
 
-
     def backwards(self, orm):
-        
+
         # Deleting field 'Relationship.weight'
         db.delete_column('relationships_relationship', 'weight')
-
 
     models = {
         'auth.group': {
