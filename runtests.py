@@ -26,15 +26,15 @@ if not settings.configured:
         )
     settings.configure(
         DATABASES=dict(default=dict(ENGINE=db_engine, NAME=db_name)),
-        SITE_ID = 1,
-        TEMPLATE_LOADERS = tl,
-        MIDDLEWARE_CLASSES = (
+        SITE_ID=1,
+        TEMPLATE_LOADERS=tl,
+        MIDDLEWARE_CLASSES=(
             'django.middleware.common.CommonMiddleware',
             'django.contrib.sessions.middleware.SessionMiddleware',
             'django.contrib.auth.middleware.AuthenticationMiddleware',
         ),
-        ROOT_URLCONF = 'relationships.relationships_tests.urls',
-        INSTALLED_APPS = [
+        ROOT_URLCONF='relationships.relationships_tests.urls',
+        INSTALLED_APPS=[
             'django.contrib.admin',
             'django.contrib.auth',
             'django.contrib.contenttypes',
@@ -46,6 +46,7 @@ if not settings.configured:
     )
 
 from django.test.utils import get_runner
+
 
 def runtests(*test_args):
     if not test_args:

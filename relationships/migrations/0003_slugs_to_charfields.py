@@ -1,60 +1,55 @@
-
 from south.db import db
-from django.db import models
 from relationships.models import *
 
+
 class Migration:
-    
+
     def forwards(self, orm):
-        
+
         # Deleting unique_together for [symmetrical_slug] on relationshipstatus.
         db.delete_unique('relationships_relationshipstatus', ['symmetrical_slug'])
-        
+
         # Deleting unique_together for [from_slug] on relationshipstatus.
         db.delete_unique('relationships_relationshipstatus', ['from_slug'])
-        
+
         # Deleting unique_together for [to_slug] on relationshipstatus.
         db.delete_unique('relationships_relationshipstatus', ['to_slug'])
-        
+
         # Changing field 'RelationshipStatus.to_slug'
         # (to signature: django.db.models.fields.CharField(max_length=100))
         db.alter_column('relationships_relationshipstatus', 'to_slug', orm['relationships.relationshipstatus:to_slug'])
-        
+
         # Changing field 'RelationshipStatus.symmetrical_slug'
         # (to signature: django.db.models.fields.CharField(max_length=100))
         db.alter_column('relationships_relationshipstatus', 'symmetrical_slug', orm['relationships.relationshipstatus:symmetrical_slug'])
-        
+
         # Changing field 'RelationshipStatus.from_slug'
         # (to signature: django.db.models.fields.CharField(max_length=100))
         db.alter_column('relationships_relationshipstatus', 'from_slug', orm['relationships.relationshipstatus:from_slug'])
-        
-    
-    
+
     def backwards(self, orm):
-        
+
         # Changing field 'RelationshipStatus.to_slug'
         # (to signature: django.db.models.fields.SlugField(max_length=50, unique=True, db_index=True))
         db.alter_column('relationships_relationshipstatus', 'to_slug', orm['relationships.relationshipstatus:to_slug'])
-        
+
         # Changing field 'RelationshipStatus.symmetrical_slug'
         # (to signature: django.db.models.fields.SlugField(max_length=50, unique=True, db_index=True))
         db.alter_column('relationships_relationshipstatus', 'symmetrical_slug', orm['relationships.relationshipstatus:symmetrical_slug'])
-        
+
         # Changing field 'RelationshipStatus.from_slug'
         # (to signature: django.db.models.fields.SlugField(max_length=50, unique=True, db_index=True))
         db.alter_column('relationships_relationshipstatus', 'from_slug', orm['relationships.relationshipstatus:from_slug'])
-        
+
         # Creating unique_together for [to_slug] on relationshipstatus.
         db.create_unique('relationships_relationshipstatus', ['to_slug'])
-        
+
         # Creating unique_together for [from_slug] on relationshipstatus.
         db.create_unique('relationships_relationshipstatus', ['from_slug'])
-        
+
         # Creating unique_together for [symmetrical_slug] on relationshipstatus.
         db.create_unique('relationships_relationshipstatus', ['symmetrical_slug'])
-        
-    
-    
+
     models = {
         'auth.group': {
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
@@ -117,5 +112,5 @@ class Migration:
             'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
         }
     }
-    
+
     complete_apps = ['relationships']

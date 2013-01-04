@@ -1,24 +1,19 @@
-
 from south.db import db
-from django.db import models
 from relationships.models import *
 
+
 class Migration:
-    
+
     def forwards(self, orm):
-        
+
         # Adding field 'Relationship.site'
         db.add_column('relationships_relationship', 'site', orm['relationships.relationship:site'])
-        
-    
-    
+
     def backwards(self, orm):
-        
+
         # Deleting field 'Relationship.site'
         db.delete_column('relationships_relationship', 'site_id')
-        
-    
-    
+
     models = {
         'auth.group': {
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
@@ -81,5 +76,5 @@ class Migration:
             'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
         }
     }
-    
+
     complete_apps = ['relationships']

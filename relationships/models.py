@@ -17,8 +17,8 @@ class RelationshipStatusManager(models.Manager):
 
     def by_slug(self, status_slug):
         return self.get(
-            models.Q(from_slug=status_slug) | 
-            models.Q(to_slug=status_slug) | 
+            models.Q(from_slug=status_slug) |
+            models.Q(to_slug=status_slug) |
             models.Q(symmetrical_slug=status_slug)
         )
 
@@ -38,7 +38,7 @@ class RelationshipStatus(models.Model):
         help_text=_("Only the user who owns these relationships can see them"))
 
     objects = RelationshipStatusManager()
-    
+
     class Meta:
         ordering = ('name',)
         verbose_name = _('Relationship status')
@@ -67,11 +67,12 @@ class Relationship(models.Model):
 
     def __unicode__(self):
         return (_('Relationship from %(from_user)s to %(to_user)s')
-                % { 'from_user': self.from_user.username,
-                    'to_user': self.to_user.username})
+                % {'from_user': self.from_user.username,
+                   'to_user': self.to_user.username})
 
-field = models.ManyToManyField(User, through=Relationship, 
+field = models.ManyToManyField(User, through=Relationship,
                                symmetrical=False, related_name='related_to')
+
 
 class RelationshipManager(User._default_manager.__class__):
     def __init__(self, instance=None, *args, **kwargs):
@@ -82,13 +83,13 @@ class RelationshipManager(User._default_manager.__class__):
         """
         Add a relationship from one user to another with the given status,
         which defaults to "following".
-        
+
         Adding a relationship is by default asymmetrical (akin to following
         someone on twitter).  Specify a symmetrical relationship (akin to being
         friends on facebook) by passing in :param:`symmetrical` = True
-        
+
         .. note::
-        
+
             If :param:`symmetrical` is set, the function will return a tuple
             containing the two relationship objects created
         """
@@ -101,7 +102,7 @@ class RelationshipManager(User._default_manager.__class__):
             status=status,
             site=Site.objects.get_current()
         )
-        
+
         if symmetrical:
             return (relationship, user.relationships.add(self.instance, status, False))
         else:
@@ -116,50 +117,50 @@ class RelationshipManager(User._default_manager.__class__):
             status = RelationshipStatus.objects.following()
 
         res = Relationship.objects.filter(
-            from_user=self.instance, 
+            from_user=self.instance,
             to_user=user,
             status=status,
             site__pk=settings.SITE_ID
         ).delete()
-        
+
         if symmetrical:
             return (res, user.relationships.remove(self.instance, status, False))
         else:
             return res
-    
+
     def _get_from_query(self, status):
         return dict(
             to_users__from_user=self.instance,
             to_users__status=status,
             to_users__site__pk=settings.SITE_ID,
         )
-    
+
     def _get_to_query(self, status):
         return dict(
             from_users__to_user=self.instance,
             from_users__status=status,
             from_users__site__pk=settings.SITE_ID
         )
-    
+
     def get_relationships(self, status, symmetrical=False):
         """
         Returns a QuerySet of user objects with which the given user has
         established a relationship.
         """
         query = self._get_from_query(status)
-        
+
         if symmetrical:
             query.update(self._get_to_query(status))
-        
+
         return User.objects.filter(**query)
-    
+
     def get_related_to(self, status):
         """
         Returns a QuerySet of user objects which have created a relationship to
         the given user.
         """
         return User.objects.filter(**self._get_to_query(status))
-    
+
     def only_to(self, status):
         """
         Returns a QuerySet of user objects who have created a relationship to
@@ -168,7 +169,7 @@ class RelationshipManager(User._default_manager.__class__):
         from_relationships = self.get_relationships(status)
         to_relationships = self.get_related_to(status)
         return to_relationships.exclude(pk__in=from_relationships.values_list('pk'))
-    
+
     def only_from(self, status):
         """
         Like :method:`only_to`, returns user objects with whom the given user
@@ -177,7 +178,7 @@ class RelationshipManager(User._default_manager.__class__):
         from_relationships = self.get_relationships(status)
         to_relationships = self.get_related_to(status)
         return from_relationships.exclude(pk__in=to_relationships.values_list('pk'))
-    
+
     def exists(self, user, status=None, symmetrical=False):
         """
         Returns boolean whether or not a relationship exists between the given
@@ -188,17 +189,17 @@ class RelationshipManager(User._default_manager.__class__):
             to_users__to_user=user,
             to_users__site__pk=settings.SITE_ID,
         )
-        
+
         if status:
             query.update(to_users__status=status)
-        
+
         if symmetrical:
             query.update(
                 from_users__to_user=self.instance,
                 from_users__from_user=user,
                 from_users__site__pk=settings.SITE_ID
             )
-            
+
             if status:
                 query.update(from_users__status=status)
 
@@ -207,19 +208,19 @@ class RelationshipManager(User._default_manager.__class__):
     # some defaults
     def following(self):
         return self.get_relationships(RelationshipStatus.objects.following())
-    
+
     def followers(self):
         return self.get_related_to(RelationshipStatus.objects.following())
-    
+
     def blocking(self):
         return self.get_relationships(RelationshipStatus.objects.blocking())
-    
+
     def blockers(self):
         return self.get_related_to(RelationshipStatus.objects.blocking())
 
     def friends(self):
         return self.get_relationships(RelationshipStatus.objects.following(), True)
-    
+
 
 if django.VERSION < (1, 2):
 
@@ -240,11 +241,11 @@ if django.VERSION < (1, 2):
             return manager
 
 elif django.VERSION > (1, 2) and django.VERSION < (1, 4):
-    
+
     fake_rel = ManyToManyRel(
         to=User,
         through=Relationship)
-        
+
     RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
 
     class RelationshipsDescriptor(object):
@@ -258,15 +259,15 @@ elif django.VERSION > (1, 2) and django.VERSION < (1, 4):
                 target_field_name='to_user'
             )
             return manager
-    
+
 else:
-    
+
     fake_rel = ManyToManyRel(
         to=User,
         through=Relationship)
-    
+
     RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
-    
+
     class RelationshipsDescriptor(object):
         def __get__(self, instance, instance_type=None):
             manager = RelatedManager(
