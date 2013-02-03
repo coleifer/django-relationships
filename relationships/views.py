@@ -1,14 +1,16 @@
+import json
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponseRedirect, HttpResponse
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.utils import simplejson as json
 from django.utils.http import urlquote
 from django.views.generic.list_detail import object_list
-from relationships.decorators import require_user
-from relationships.models import RelationshipStatus
+
+from .decorators import require_user
+from .models import RelationshipStatus
 
 
 @login_required
