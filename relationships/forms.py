@@ -18,7 +18,7 @@ class RelationshipStatusAdminForm(forms.ModelForm):
             status_qs = status_qs.exclude(pk=self.instance.pk)
 
         if status_qs.exists():
-            raise forms.ValidationError('"%s" slug already in use on %s' % \
+            raise forms.ValidationError('"%s" slug already in use on %s' %
                 (status_slug, unicode(status_qs[0])))
 
     def clean_from_slug(self):

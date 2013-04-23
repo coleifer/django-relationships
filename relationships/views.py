@@ -6,7 +6,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.utils import simplejson as json
 from django.utils.http import urlquote
-from django.views.generic.list_detail import object_list
+from django.views.generic.list import ListView
 from relationships.decorators import require_user
 from relationships.models import RelationshipStatus
 
@@ -17,7 +17,7 @@ def relationship_redirect(request):
 
 
 def _relationship_list(request, queryset, template_name=None, *args, **kwargs):
-    return object_list(
+    return ListView.object_list(
         request=request,
         queryset=queryset,
         paginate_by=20,
