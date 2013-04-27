@@ -4,10 +4,9 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponseRedirect, HttpResponse
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.utils.http import urlquote
-from django.views.generic.list_detail import object_list
+from django.views.generic import ListView
 
 from .decorators import require_user
 from .models import RelationshipStatus
@@ -19,16 +18,12 @@ def relationship_redirect(request):
 
 
 def _relationship_list(request, queryset, template_name=None, *args, **kwargs):
-    return object_list(
-        request=request,
+    return ListView.as_view(
         queryset=queryset,
-        paginate_by=20,
-        page=int(request.GET.get('page', 0)),
-        template_object_name='relationship',
         template_name=template_name,
-        *args,
-        **kwargs
-    )
+        paginate_by=20,
+        context_object_name='relationship_list'
+    )(request, page=int(request.GET.get('page', 0)), *args, **kwargs)
 
 
 def get_relationship_status_or_404(status_slug):
@@ -98,6 +93,6 @@ def relationship_handler(request, user, status_slug, add=True,
 
         template_name = success_template_name
 
-    return render_to_response(template_name,
-        {'to_user': user, 'status': status, 'add': add},
-        context_instance=RequestContext(request))
+    return render(request,
+        template_name,
+        {'to_user': user, 'status': status, 'add': add})
