@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
 from django.template import Template, Context
@@ -11,6 +10,7 @@ from relationships.listeners import (attach_relationship_listener,
 from relationships.models import Relationship, RelationshipStatus
 from relationships.utils import (relationship_exists, extract_user_field,
     positive_filter, negative_filter)
+from relationships.compat import User
 
 
 class BaseRelationshipsTestCase(TestCase):

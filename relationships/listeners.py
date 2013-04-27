@@ -1,6 +1,6 @@
 from django.db.models import signals
 
-from relationships.models import RelationshipStatus, Relationship
+from .models import RelationshipStatus, Relationship
 
 
 def mutually_exclusive_fix(sender, instance, created, **kwargs):
