@@ -6,7 +6,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.utils import simplejson as json
 from django.utils.http import urlquote
-from django.views.generic.list_detail import object_list
+from django.views.generic.list import ListView
 from relationships.decorators import require_user
 from relationships.models import RelationshipStatus
 
@@ -15,19 +15,11 @@ from relationships.models import RelationshipStatus
 def relationship_redirect(request):
     return HttpResponseRedirect(reverse('relationship_list', args=[request.user.username]))
 
-
-def _relationship_list(request, queryset, template_name=None, *args, **kwargs):
-    return object_list(
-        request=request,
-        queryset=queryset,
-        paginate_by=20,
-        page=int(request.GET.get('page', 0)),
-        template_object_name='relationship',
-        template_name=template_name,
-        *args,
-        **kwargs
-    )
-
+class RelationshipListView(ListView):
+    def get_context_data(self, **kwargs):
+        context = super(RelationshipListView, self).get_context_data(**kwargs)
+        return context
+_relationship_list = RelationshipListView.as_view()
 
 def get_relationship_status_or_404(status_slug):
     try:
