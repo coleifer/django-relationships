@@ -1,8 +1,7 @@
 *.pyc
-build/
-src/
-pip-log.txt
-*DS_Store
-*~
 dist/
+build/
 *.egg-info/
+.*
+!.gitignore
+!.travis.yml
