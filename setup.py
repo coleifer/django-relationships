@@ -16,7 +16,7 @@ setup(
     author_email='coleifer@gmail.com',
     url='http://github.com/coleifer/django-relationships/tree/master',
     packages=find_packages(),
-    package_data = {
+    package_data={
         'relationships': [
             'fixtures/*.json',
             'templates/*.html',

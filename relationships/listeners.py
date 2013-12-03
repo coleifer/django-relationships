@@ -1,6 +1,6 @@
 from django.db.models import signals
 
-from relationships.models import RelationshipStatus, Relationship
+from .models import RelationshipStatus, Relationship
 
 
 def mutually_exclusive_fix(sender, instance, created, **kwargs):
@@ -34,9 +34,10 @@ def mutually_exclusive_fix(sender, instance, created, **kwargs):
 
 DISPATCH_UID = 'relationships.listeners.exclusive_fix'
 
-def attach_relationship_listener(func=mutually_exclusive_fix):
-    signals.post_save.connect(func, sender=Relationship,
-        dispatch_uid=DISPATCH_UID)
 
-def detach_relationship_listener():
-    signals.post_save.disconnect(sender=Relationship, dispatch_uid=DISPATCH_UID)
+def attach_relationship_listener(func=mutually_exclusive_fix, dispatch_uid=DISPATCH_UID):
+    signals.post_save.connect(func, sender=Relationship, dispatch_uid=dispatch_uid)
+
+
+def detach_relationship_listener(dispatch_uid=DISPATCH_UID):
+    signals.post_save.disconnect(sender=Relationship, dispatch_uid=dispatch_uid)

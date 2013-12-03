@@ -1,10 +1,11 @@
 import django
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.db import models, connection
 from django.db.models.fields.related import create_many_related_manager, ManyToManyRel
 from django.utils.translation import ugettext_lazy as _
+
+from .compat import User
 
 
 class RelationshipStatusManager(models.Manager):
@@ -17,9 +18,10 @@ class RelationshipStatusManager(models.Manager):
 
     def by_slug(self, status_slug):
         return self.get(
-            models.Q(from_slug=status_slug) | 
-            models.Q(to_slug=status_slug) | 
-            models.Q(symmetrical_slug=status_slug))
+            models.Q(from_slug=status_slug) |
+            models.Q(to_slug=status_slug) |
+            models.Q(symmetrical_slug=status_slug)
+        )
 
 
 class RelationshipStatus(models.Model):
@@ -37,7 +39,7 @@ class RelationshipStatus(models.Model):
         help_text=_("Only the user who owns these relationships can see them"))
 
     objects = RelationshipStatusManager()
-    
+
     class Meta:
         ordering = ('name',)
         verbose_name = _('Relationship status')
@@ -66,18 +68,32 @@ class Relationship(models.Model):
 
     def __unicode__(self):
         return (_('Relationship from %(from_user)s to %(to_user)s')
-                % { 'from_user': self.from_user.username,
-                    'to_user': self.to_user.username})
+                % {'from_user': self.from_user.username,
+                   'to_user': self.to_user.username})
 
-field = models.ManyToManyField(User, through=Relationship, 
+field = models.ManyToManyField(User, through=Relationship,
                                symmetrical=False, related_name='related_to')
+
 
 class RelationshipManager(User._default_manager.__class__):
     def __init__(self, instance=None, *args, **kwargs):
         super(RelationshipManager, self).__init__(*args, **kwargs)
         self.instance = instance
 
-    def add(self, user, status=None):
+    def add(self, user, status=None, symmetrical=False):
+        """
+        Add a relationship from one user to another with the given status,
+        which defaults to "following".
+
+        Adding a relationship is by default asymmetrical (akin to following
+        someone on twitter).  Specify a symmetrical relationship (akin to being
+        friends on facebook) by passing in :param:`symmetrical` = True
+
+        .. note::
+
+            If :param:`symmetrical` is set, the function will return a tuple
+            containing the two relationship objects created
+        """
         if not status:
             status = RelationshipStatus.objects.following()
 
@@ -88,98 +104,124 @@ class RelationshipManager(User._default_manager.__class__):
             site=Site.objects.get_current()
         )
 
-        return relationship
+        if symmetrical:
+            return (relationship, user.relationships.add(self.instance, status, False))
+        else:
+            return relationship
 
-    def remove(self, user, status=None):
+    def remove(self, user, status=None, symmetrical=False):
+        """
+        Remove a relationship from one user to another, with the same caveats
+        and behavior as adding a relationship.
+        """
         if not status:
             status = RelationshipStatus.objects.following()
 
-        return Relationship.objects.filter(
-            from_user=self.instance, 
+        res = Relationship.objects.filter(
+            from_user=self.instance,
             to_user=user,
             status=status,
             site__pk=settings.SITE_ID
         ).delete()
-    
-    def get_relationships(self, status):
-        return User.objects.filter(
+
+        if symmetrical:
+            return (res, user.relationships.remove(self.instance, status, False))
+        else:
+            return res
+
+    def _get_from_query(self, status):
+        return dict(
             to_users__from_user=self.instance,
             to_users__status=status,
-            to_users__site__pk=settings.SITE_ID
+            to_users__site__pk=settings.SITE_ID,
         )
-    
-    def get_related_to(self, status):
-        return User.objects.filter(
+
+    def _get_to_query(self, status):
+        return dict(
             from_users__to_user=self.instance,
             from_users__status=status,
             from_users__site__pk=settings.SITE_ID
         )
 
-    def get_symmetrical(self, status):
-        return User.objects.filter(
-            to_users__status=status, 
-            to_users__from_user=self.instance,
-            to_users__site__pk=settings.SITE_ID,
-            from_users__status=status, 
-            from_users__to_user=self.instance,
-            from_users__site__pk=settings.SITE_ID
-        )
-    
+    def get_relationships(self, status, symmetrical=False):
+        """
+        Returns a QuerySet of user objects with which the given user has
+        established a relationship.
+        """
+        query = self._get_from_query(status)
+
+        if symmetrical:
+            query.update(self._get_to_query(status))
+
+        return User.objects.filter(**query)
+
+    def get_related_to(self, status):
+        """
+        Returns a QuerySet of user objects which have created a relationship to
+        the given user.
+        """
+        return User.objects.filter(**self._get_to_query(status))
+
     def only_to(self, status):
+        """
+        Returns a QuerySet of user objects who have created a relationship to
+        the given user, but which the given user has not reciprocated
+        """
         from_relationships = self.get_relationships(status)
         to_relationships = self.get_related_to(status)
         return to_relationships.exclude(pk__in=from_relationships.values_list('pk'))
-    
+
     def only_from(self, status):
+        """
+        Like :method:`only_to`, returns user objects with whom the given user
+        has created a relationship, but which have not reciprocated
+        """
         from_relationships = self.get_relationships(status)
         to_relationships = self.get_related_to(status)
         return from_relationships.exclude(pk__in=to_relationships.values_list('pk'))
-    
-    def exists(self, user, status=None):
-        query = {
-            'to_users__from_user': self.instance,
-            'to_users__to_user': user,
-            'to_users__site__pk': settings.SITE_ID
-        }
-        if status:
-            query['to_users__status'] = status
 
-        return User.objects.filter(**query).count() != 0
-
-    def symmetrical_exists(self, user, status=None):
-        query = {
-            'to_users__from_user': self.instance,
-            'to_users__to_user': user,
-            'to_users__site__pk': settings.SITE_ID,
-            'from_users__to_user': self.instance,
-            'from_users__from_user': user,
-            'from_users__site__pk': settings.SITE_ID
-        }
+    def exists(self, user, status=None, symmetrical=False):
+        """
+        Returns boolean whether or not a relationship exists between the given
+        users.  An optional :class:`RelationshipStatus` instance can be specified.
+        """
+        query = dict(
+            to_users__from_user=self.instance,
+            to_users__to_user=user,
+            to_users__site__pk=settings.SITE_ID,
+        )
 
         if status:
-            query.update({
-                'to_users__status': status,
-                'from_users__status': status
-            })
+            query.update(to_users__status=status)
 
-        return User.objects.filter(**query).count() != 0
+        if symmetrical:
+            query.update(
+                from_users__to_user=self.instance,
+                from_users__from_user=user,
+                from_users__site__pk=settings.SITE_ID
+            )
+
+            if status:
+                query.update(from_users__status=status)
+
+        return User.objects.filter(**query).exists()
 
     # some defaults
     def following(self):
         return self.get_relationships(RelationshipStatus.objects.following())
-    
+
     def followers(self):
         return self.get_related_to(RelationshipStatus.objects.following())
-    
+
     def blocking(self):
         return self.get_relationships(RelationshipStatus.objects.blocking())
-    
+
     def blockers(self):
         return self.get_related_to(RelationshipStatus.objects.blocking())
 
     def friends(self):
-        return self.get_symmetrical(RelationshipStatus.objects.following())
-    
+        return self.get_relationships(RelationshipStatus.objects.following(), True)
+
 
 if django.VERSION < (1, 2):
 
@@ -199,12 +241,12 @@ if django.VERSION < (1, 2):
             )
             return manager
 
-else:
-    
+elif django.VERSION > (1, 2) and django.VERSION < (1, 4):
+
     fake_rel = ManyToManyRel(
         to=User,
         through=Relationship)
-        
+
     RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
 
     class RelationshipsDescriptor(object):
@@ -216,6 +258,27 @@ else:
                 symmetrical=False,
                 source_field_name='from_user',
                 target_field_name='to_user'
+            )
+            return manager
+
+else:
+
+    fake_rel = ManyToManyRel(
+        to=User,
+        through=Relationship)
+
+    RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
+
+    class RelationshipsDescriptor(object):
+        def __get__(self, instance, instance_type=None):
+            manager = RelatedManager(
+                model=User,
+                query_field_name='related_to',
+                instance=instance,
+                symmetrical=False,
+                source_field_name='from_user',
+                target_field_name='to_user',
+                through=Relationship,
             )
             return manager
 

@@ -1,30 +1,25 @@
-
 from south.db import db
-from django.db import models
 from relationships.models import *
 
+
 class Migration:
-    
+
     def forwards(self, orm):
-        
+
         # Deleting unique_together for [from_user, to_user, status] on relationship.
         db.delete_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id'])
-        
+
         # Creating unique_together for [from_user, to_user, status, site] on Relationship.
         db.create_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id', 'site_id'])
-        
-    
-    
+
     def backwards(self, orm):
-        
+
         # Deleting unique_together for [from_user, to_user, status, site] on Relationship.
         db.delete_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id', 'site_id'])
-        
+
         # Creating unique_together for [from_user, to_user, status] on relationship.
         db.create_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id'])
-        
-    
-    
+
     models = {
         'auth.group': {
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
@@ -87,5 +82,5 @@ class Migration:
             'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
         }
     }
-    
+
     complete_apps = ['relationships']

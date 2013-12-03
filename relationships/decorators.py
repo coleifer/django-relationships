@@ -1,5 +1,7 @@
-from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
+
+from .compat import User
+
 
 def require_user(view):
     def inner(request, username, *args, **kwargs):

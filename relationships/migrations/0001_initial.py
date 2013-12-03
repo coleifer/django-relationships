@@ -1,12 +1,11 @@
-
 from south.db import db
-from django.db import models
 from relationships.models import *
 
+
 class Migration:
-    
+
     def forwards(self, orm):
-        
+
         # Adding model 'RelationshipStatus'
         db.create_table('relationships_relationshipstatus', (
             ('id', orm['relationships.RelationshipStatus:id']),
@@ -19,7 +18,7 @@ class Migration:
             ('private', orm['relationships.RelationshipStatus:private']),
         ))
         db.send_create_signal('relationships', ['RelationshipStatus'])
-        
+
         # Adding model 'Relationship'
         db.create_table('relationships_relationship', (
             ('id', orm['relationships.Relationship:id']),
@@ -29,25 +28,21 @@ class Migration:
             ('created', orm['relationships.Relationship:created']),
         ))
         db.send_create_signal('relationships', ['Relationship'])
-        
+
         # Creating unique_together for [from_user, to_user, status] on Relationship.
         db.create_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id'])
-        
-    
-    
+
     def backwards(self, orm):
-        
+
         # Deleting unique_together for [from_user, to_user, status] on Relationship.
         db.delete_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id'])
-        
+
         # Deleting model 'RelationshipStatus'
         db.delete_table('relationships_relationshipstatus')
-        
+
         # Deleting model 'Relationship'
         db.delete_table('relationships_relationship')
-        
-    
-    
+
     models = {
         'auth.group': {
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
@@ -103,5 +98,5 @@ class Migration:
             'verb': ('django.db.models.fields.CharField', [], {'max_length': '100'})
         }
     }
-    
+
     complete_apps = ['relationships']
