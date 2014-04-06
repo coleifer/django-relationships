@@ -71,9 +71,7 @@ def relationship_list(request, user, status_slug=None,
 
 @login_required
 @require_user
-def relationship_handler(request, user, status_slug, add=True,
-                         template_name='relationships/confirm.html',
-                         success_template_name='relationships/success.html'):
+def relationship_handler(request, user, status_slug, add=True):
 
     status = get_relationship_status_or_404(status_slug)
     is_symm = status_slug == status.symmetrical_slug
@@ -81,18 +79,8 @@ def relationship_handler(request, user, status_slug, add=True,
     if request.method == 'POST':
         if add:
             request.user.relationships.add(user, status, is_symm)
+            return redirect(user)
+        
         else:
             request.user.relationships.remove(user, status, is_symm)
-
-        if request.is_ajax():
-            response = {'result': '1'}
-            return HttpResponse(json.dumps(response), mimetype="application/json")
-
-        if request.GET.get('next'):
-            return HttpResponseRedirect(request.GET['next'])
-
-        template_name = success_template_name
-
-    return render(request,
-        template_name,
-        {'to_user': user, 'status': status, 'add': add})
+            return redirect(user)
