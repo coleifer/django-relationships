@@ -68,8 +68,8 @@ class Relationship(models.Model):
 
     def __unicode__(self):
         return (_('Relationship from %(from_user)s to %(to_user)s')
-                % {'from_user': self.from_user.username,
-                   'to_user': self.to_user.username})
+                % {'from_user': self.from_user.get_username(),
+                   'to_user': self.to_user.get_username()})
 
 field = models.ManyToManyField(User, through=Relationship,
                                symmetrical=False, related_name='related_to')
