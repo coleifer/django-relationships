@@ -75,7 +75,64 @@ field = models.ManyToManyField(User, through=Relationship,
                                symmetrical=False, related_name='related_to')
 
 
-class RelationshipManager(User._default_manager.__class__):
+def from_relationship(rel):
+    def _from_relationship(self):
+        return self.get_relationships(rel)
+    return _from_relationship
+
+def to_relationship(rel):
+    def _to_relationship(self):
+        return self.get_related_to(rel)
+    return _to_relationship
+
+def symmetrical_relationship(rel):
+    def _symmetrical_relationship(self):
+        return self.get_relationships(rel, symmetrical=True)
+    return _symmetrical_relationship
+
+
+class RelationshipManagerMetaClass(type):
+    def __new__(cls, name, bases, attrs):
+        for rel in RelationshipStatus.objects.all():
+            from_method = from_relationship(rel)
+            attrs[rel.from_slug.replace('-', '_')] = from_method
+            to_method = to_relationship(rel)
+            attrs[rel.to_slug.replace('-', '_')] = to_method
+            if not rel.symmetrical_slug.startswith('!'):
+                symmetrical_method = symmetrical_relationship(rel)
+                attrs[rel.symmetrical_slug.replace('-', '_')] = symmetrical_method
+        return super(RelationshipManagerMetaClass, cls).__new__(cls, name, bases, attrs)
+
+
+class RelationshipManagerMetaClassMixin(object):
+    __metaclass__ = RelationshipManagerMetaClass
+
+
+class CooperativeMeta(type):
+    def __new__(cls, name, bases, members):
+        #collect up the metaclasses
+        metas = [type(base) for base in bases]
+
+        # prune repeated or conflicting entries
+        metas = [meta for index, meta in enumerate(metas)
+            if not [later for later in metas[index+1:]
+                if issubclass(later, meta)]]
+
+        # whip up the actual combined meta class derive off all of these
+        meta = type(name, tuple(metas), dict(combined_metas = metas))
+
+        # make the actual object
+        return meta(name, bases, members)
+
+    def __init__(self, name, bases, members):
+        for meta in self.combined_metas:
+            meta.__init__(self, name, bases, members)
+
+
+class RelationshipManager(RelationshipManagerMetaClassMixin,
+                          User._default_manager.__class__):
+    __metaclass__ = CooperativeMeta
+
     def __init__(self, instance=None, *args, **kwargs):
         super(RelationshipManager, self).__init__(*args, **kwargs)
         self.instance = instance
@@ -205,22 +262,6 @@ class RelationshipManager(User._default_manager.__class__):
                 query.update(from_users__status=status)
 
         return User.objects.filter(**query).exists()
-
-    # some defaults
-    def following(self):
-        return self.get_relationships(RelationshipStatus.objects.following())
-
-    def followers(self):
-        return self.get_related_to(RelationshipStatus.objects.following())
-
-    def blocking(self):
-        return self.get_relationships(RelationshipStatus.objects.blocking())
-
-    def blockers(self):
-        return self.get_related_to(RelationshipStatus.objects.blocking())
-
-    def friends(self):
-        return self.get_relationships(RelationshipStatus.objects.following(), True)
 
 
 if django.VERSION < (1, 2):
