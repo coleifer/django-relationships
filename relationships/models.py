@@ -1,11 +1,61 @@
+from functools import partial
+import random
+
 import django
+from django.core.exceptions import ValidationError
+import jsonfield
 from django.conf import settings
 from django.contrib.sites.models import Site
-from django.db import models, connection
+from django.db import models, connection, transaction
 from django.db.models.fields.related import create_many_related_manager, ManyToManyRel
 from django.utils.translation import ugettext_lazy as _
 
 from .compat import User
+from south.modelsinspector import add_introspection_rules
+
+
+def sid_creator(prefix):
+    try:
+        sid_creator.limit
+    except AttributeError:
+        sid_creator.limit = 16**SIDField.SID_LENGTH
+    # http://stackoverflow.com/a/2782859/440060
+    return prefix + '_' + ('%0{}x'.format(SIDField.SID_LENGTH) % random.randrange(sid_creator.limit))
+
+
+class SIDField(models.CharField):
+    SID_LENGTH = 16
+
+    def __init__(self, *args, **kwargs):
+        kwargs['max_length'] = SIDField.SID_LENGTH + 4
+        kwargs['unique'] = True
+        kwargs['db_index'] = True
+        kwargs['editable'] = False
+        kwargs['primary_key'] = True
+        if 'prefix' in kwargs:
+            self.prefix = kwargs.pop('prefix')
+        super(SIDField, self).__init__(*args, **kwargs)
+
+    def contribute_to_class(self, cls, name, virtual_only=False):
+        if not hasattr(self, 'prefix'):
+            self.prefix = cls.__name__[0].upper()
+        self.default = partial(sid_creator, self.prefix)
+        super(SIDField, self).contribute_to_class(cls, name, virtual_only=virtual_only)
+
+
+rules = [
+    (
+        (SIDField,),
+        [],
+        {
+            "db_index": [True, {"is_value": True}],
+            "max_length": [SIDField.SID_LENGTH + 4, {"is_value": True}],
+            "unique": [True, {"is_value": True}],
+            "primary_key": [True, {"is_value": True}]
+        },
+    )
+]
+add_introspection_rules(rules, ["^relationships\.models\.SIDField"])
 
 
 class RelationshipStatusManager(models.Manager):
@@ -25,14 +75,18 @@ class RelationshipStatusManager(models.Manager):
 
 
 class RelationshipStatus(models.Model):
+    id = SIDField(prefix='RS')
     name = models.CharField(_('name'), max_length=100)
-    verb = models.CharField(_('verb'), max_length=100)
+    verb = models.CharField(_('verb'), max_length=100, unique=True)
     from_slug = models.CharField(_('from slug'), max_length=100,
-        help_text=_("Denote the relationship from the user, i.e. 'following'"))
+        help_text=_("Denote the relationship from the user, i.e. 'following'"),
+        unique=True)
     to_slug = models.CharField(_('to slug'), max_length=100,
-        help_text=_("Denote the relationship to the user, i.e. 'followers'"))
+        help_text=_("Denote the relationship to the user, i.e. 'followers'"),
+        unique=True)
     symmetrical_slug = models.CharField(_('symmetrical slug'), max_length=100,
-        help_text=_("When a mutual relationship exists, i.e. 'friends'"))
+        help_text=_("When a mutual relationship exists, i.e. 'friends'"),
+        unique=True)
     login_required = models.BooleanField(_('login required'), default=False,
         help_text=_("Users must be logged in to see these relationships"))
     private = models.BooleanField(_('private'), default=False,
@@ -50,15 +104,19 @@ class RelationshipStatus(models.Model):
 
 
 class Relationship(models.Model):
+    id = SIDField()
     from_user = models.ForeignKey(User,
         related_name='from_users', verbose_name=_('from user'))
     to_user = models.ForeignKey(User,
-        related_name='to_users', verbose_name=_('to user'))
+        related_name='to_users', verbose_name=_('to user'),
+        null=True, blank=True)
     status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'))
     created = models.DateTimeField(_('created'), auto_now_add=True)
     weight = models.FloatField(_('weight'), default=1.0, blank=True, null=True)
     site = models.ForeignKey(Site, default=settings.SITE_ID,
         verbose_name=_('site'), related_name='relationships')
+    extra_data = jsonfield.JSONField(_('extra data'), default=None, blank=True,
+                                     null=True, serialize=False)
 
     class Meta:
         unique_together = (('from_user', 'to_user', 'status', 'site'),)
@@ -69,7 +127,15 @@ class Relationship(models.Model):
     def __unicode__(self):
         return (_('Relationship from %(from_user)s to %(to_user)s')
                 % {'from_user': self.from_user.username,
-                   'to_user': self.to_user.username})
+                   'to_user': self.to_user.username if self.to_user else 'None'})
+
+    @staticmethod
+    def get_owner_fields():
+        return ('to_user', 'from_user')
+
+    def is_owner(self, user):
+        return user.pk in (self.to_user_id, self.from_user_id)
+
 
 field = models.ManyToManyField(User, through=Relationship,
                                symmetrical=False, related_name='related_to')
@@ -80,7 +146,7 @@ class RelationshipManager(User._default_manager.__class__):
         super(RelationshipManager, self).__init__(*args, **kwargs)
         self.instance = instance
 
-    def add(self, user, status=None, symmetrical=False):
+    def add(self, user, status=None, symmetrical=False, extra_data=None):
         """
         Add a relationship from one user to another with the given status,
         which defaults to "following".
@@ -97,15 +163,24 @@ class RelationshipManager(User._default_manager.__class__):
         if not status:
             status = RelationshipStatus.objects.following()
 
-        relationship, created = Relationship.objects.get_or_create(
-            from_user=self.instance,
-            to_user=user,
-            status=status,
-            site=Site.objects.get_current()
-        )
+        try:
+            relationship = Relationship.objects.get(
+                from_user=self.instance,
+                to_user=user,
+                status=status,
+                site=Site.objects.get_current(),
+            )
+        except Relationship.DoesNotExist:
+            relationship = Relationship.objects.create(
+                from_user=self.instance,
+                to_user=user,
+                status=status,
+                site=Site.objects.get_current(),
+                extra_data=extra_data
+            )
 
         if symmetrical:
-            return (relationship, user.relationships.add(self.instance, status, False))
+            return (relationship, user.relationships.add(self.instance, status, False, extra_data))
         else:
             return relationship
 
