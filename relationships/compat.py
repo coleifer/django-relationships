@@ -2,7 +2,7 @@ import django
 
 
 # Django 1.5 add support for custom auth user model
-if django.VERSION >= (1, 5):
+if django.VERSION >= (1, 5) and django.VERSION < (1, 7): #1.7 User init is done in app config 
     from django.contrib.auth import get_user_model
     User = get_user_model()
 else:
