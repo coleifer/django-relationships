@@ -266,7 +266,7 @@ else:
     fake_rel = ManyToManyRel(
         to=User,
         through=Relationship)
-
+    from .compat import create_many_related_manager
     RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
 
     class RelationshipsDescriptor(object):
