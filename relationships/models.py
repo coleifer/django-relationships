@@ -109,6 +109,33 @@ class RelationshipManager(User._default_manager.__class__):
         else:
             return relationship
 
+    def get_relationship_obj(self, user, status=None, symmetrical=False):
+        if not status:
+            status = RelationshipStatus.objects.following()
+
+        relationship = Relationship.objects.get(
+            from_user=self.instance,
+            to_user=user,
+            status=status,
+            site=Site.objects.get_current()
+        )
+
+        if symmetrical:
+            return (relationship, user.relationships.get_relationship_obj(self.instance, status, False))
+        else:
+            return relationship
+
+    def filter_relationships(self, status=None):
+        if not status:
+            status = RelationshipStatus.objects.following()
+
+        return Relationship.objects.filter(
+            from_user=self.instance,
+            status=status,
+            site=Site.objects.get_current()
+        )
+
+
     def remove(self, user, status=None, symmetrical=False):
         """
         Remove a relationship from one user to another, with the same caveats
