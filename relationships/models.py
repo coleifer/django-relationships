@@ -25,7 +25,7 @@ class RelationshipStatusManager(models.Manager):
 
 
 class RelationshipStatus(models.Model):
-    name = models.CharField(_('name'), max_length=100)
+    name = models.CharField(_('name'), max_length=100, primary_key=True)
     verb = models.CharField(_('verb'), max_length=100)
     from_slug = models.CharField(_('from slug'), max_length=100,
         help_text=_("Denote the relationship from the user, i.e. 'following'"))
@@ -56,6 +56,7 @@ class Relationship(models.Model):
         related_name='to_users', verbose_name=_('to user'))
     status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'))
     created = models.DateTimeField(_('created'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated_at'), auto_now=True)
     weight = models.FloatField(_('weight'), default=1.0, blank=True, null=True)
     site = models.ForeignKey(Site, default=settings.SITE_ID,
         verbose_name=_('site'), related_name='relationships')
