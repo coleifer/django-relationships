@@ -16,6 +16,9 @@ class RelationshipStatusManager(models.Manager):
     def blocking(self):
         return self.get(from_slug='blocking')
 
+    def blocked(self):
+        return self.get(from_slug='blocked')
+
     def by_slug(self, status_slug):
         return self.get(
             models.Q(from_slug=status_slug) |
