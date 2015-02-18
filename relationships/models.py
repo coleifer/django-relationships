@@ -53,9 +53,9 @@ class RelationshipStatus(models.Model):
 
 
 class Relationship(models.Model):
-    from_user = models.ForeignKey(User,
+    from_user = models.ForeignKey(settings.AUTH_USER_MODEL,
         related_name='from_users', verbose_name=_('from user'))
-    to_user = models.ForeignKey(User,
+    to_user = models.ForeignKey(settings.AUTH_USER_MODEL,
         related_name='to_users', verbose_name=_('to user'))
     status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'))
     created = models.DateTimeField(_('created'), auto_now_add=True)
@@ -313,6 +313,6 @@ else:
             )
             return manager
 
-#HACK
+# HACK
 field.contribute_to_class(User, 'relationships')
 setattr(User, 'relationships', RelationshipsDescriptor())

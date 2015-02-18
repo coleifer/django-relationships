@@ -2,7 +2,7 @@ import django
 
 
 # Django 1.5 add support for custom auth user model
-if django.VERSION >= (1, 5) and django.VERSION < (1, 7): #1.7 User init is done in app config 
+if django.VERSION >= (1, 5) and django.VERSION < (1, 7):  # 1.7 User init is done in app config
     from django.contrib.auth import get_user_model
     User = get_user_model()
 else:
@@ -16,8 +16,6 @@ try:
     from django.conf.urls import patterns, url, include
 except:
     from django.conf.urls.defaults import patterns, url, include
-
-
 
 ####Hack!!!! direct copy from django 1.4.7 package#####
 def create_many_related_manager(superclass, rel):
