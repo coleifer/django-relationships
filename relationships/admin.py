@@ -26,7 +26,10 @@ if User == DefaultUserModel:
     class UserRelationshipAdmin(UserRelationshipAdminMixin, UserAdmin):
         pass
 
-    admin.site.unregister(User)
+    try:
+        admin.site.unregister(User)
+    except admin.sites.NotRegistered:
+        pass
     admin.site.register(User, UserRelationshipAdmin)
 
 admin.site.register(RelationshipStatus, RelationshipStatusAdmin)
