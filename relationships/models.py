@@ -312,7 +312,3 @@ else:
                 through=Relationship,
             )
             return manager
-
-# HACK
-field.contribute_to_class(User, 'relationships')
-setattr(User, 'relationships', RelationshipsDescriptor())
