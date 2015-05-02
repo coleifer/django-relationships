@@ -32,7 +32,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='RelationshipStatus',
             fields=[
-                ('name', models.CharField(max_length=100, serialize=False, verbose_name='name', primary_key=True)),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('name', models.CharField(max_length=100, verbose_name='name')),
                 ('verb', models.CharField(max_length=100, verbose_name='verb')),
                 ('from_slug', models.CharField(help_text="Denote the relationship from the user, i.e. 'following'", max_length=100, verbose_name='from slug')),
                 ('to_slug', models.CharField(help_text="Denote the relationship to the user, i.e. 'followers'", max_length=100, verbose_name='to slug')),

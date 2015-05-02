@@ -28,7 +28,7 @@ class RelationshipStatusManager(models.Manager):
 
 
 class RelationshipStatus(models.Model):
-    name = models.CharField(_('name'), max_length=100, primary_key=True)
+    name = models.CharField(_('name'), max_length=100)
     verb = models.CharField(_('verb'), max_length=100)
     from_slug = models.CharField(_('from slug'), max_length=100,
         help_text=_("Denote the relationship from the user, i.e. 'following'"))
@@ -295,6 +295,7 @@ elif django.VERSION > (1, 2) and django.VERSION < (1, 4):
 else:
 
     fake_rel = ManyToManyRel(
+        field=None,
         to=User,
         through=Relationship)
     from .compat import create_many_related_manager
