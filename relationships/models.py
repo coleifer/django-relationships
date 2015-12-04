@@ -2,7 +2,12 @@ import django
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.db import models, connection
-from django.db.models.fields.related import create_many_related_manager, ManyToManyRel
+from django.db.models.fields.related import ManyToManyRel
+try:
+    from django.db.models.fields.related import create_many_related_manager
+except ImportError:
+    from django.db.models.fields.related_descriptors import\
+    create_forward_many_to_many_manager as create_many_related_manager
 from django.utils.translation import ugettext_lazy as _
 
 from .compat import User
