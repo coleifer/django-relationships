@@ -13,9 +13,9 @@ else:
 
 # location of patterns, url, include changes in 1.4 onwards
 try:
-    from django.conf.urls import patterns, url, include
+    from django.conf.urls import url, include
 except:
-    from django.conf.urls.defaults import patterns, url, include
+    from django.conf.urls.defaults import url, include
 
 ####Hack!!!! direct copy from django 1.4.7 package#####
 def create_many_related_manager(superclass, rel):
