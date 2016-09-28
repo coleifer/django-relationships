@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from django.apps import AppConfig
 
 
@@ -8,10 +10,10 @@ class RelationshipsConfig(AppConfig):
         from django.contrib.auth import get_user_model
         User = get_user_model()
 
-        import compat
+        from . import compat
         compat.User = User
 
-        from relationships import models as rmodels
+        from . import models as rmodels
         rmodels.User = User
 
         from django.db.models import ManyToManyField
