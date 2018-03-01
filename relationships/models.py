@@ -61,7 +61,7 @@ class Relationship(models.Model):
     from_user = models.ForeignKey(settings.AUTH_USER_MODEL,
         related_name='from_users', verbose_name=_('from user'), on_delete=models.CASCADE)
     to_user = models.ForeignKey(settings.AUTH_USER_MODEL,
-        related_name='to_users', verbose_name=_('to user'))
+        related_name='to_users', verbose_name=_('to user'), on_delete=models.CASCADE)
     status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'), on_delete=models.CASCADE)
     created = models.DateTimeField(_('created'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated_at'), auto_now=True)
