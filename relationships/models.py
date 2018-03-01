@@ -59,15 +59,15 @@ class RelationshipStatus(models.Model):
 
 class Relationship(models.Model):
     from_user = models.ForeignKey(settings.AUTH_USER_MODEL,
-        related_name='from_users', verbose_name=_('from user'))
+        related_name='from_users', verbose_name=_('from user'), on_delete=models.CASCADE)
     to_user = models.ForeignKey(settings.AUTH_USER_MODEL,
         related_name='to_users', verbose_name=_('to user'))
-    status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'))
+    status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'), on_delete=models.CASCADE)
     created = models.DateTimeField(_('created'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated_at'), auto_now=True)
     weight = models.FloatField(_('weight'), default=1.0, blank=True, null=True)
     site = models.ForeignKey(Site, default=settings.SITE_ID,
-        verbose_name=_('site'), related_name='relationships')
+        verbose_name=_('site'), related_name='relationships', on_delete=models.CASCADE)
 
     class Meta:
         unique_together = (('from_user', 'to_user', 'status', 'site'),)

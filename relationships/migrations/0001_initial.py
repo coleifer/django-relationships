@@ -19,8 +19,8 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('created', models.DateTimeField(auto_now_add=True, verbose_name='created')),
                 ('weight', models.FloatField(default=1.0, null=True, verbose_name='weight', blank=True)),
-                ('from_user', models.ForeignKey(related_name='from_users', verbose_name='from user', to=settings.AUTH_USER_MODEL)),
-                ('site', models.ForeignKey(related_name='relationships', default=1, verbose_name='site', to='sites.Site')),
+                ('from_user', models.ForeignKey(related_name='from_users', verbose_name='from user', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
+                ('site', models.ForeignKey(related_name='relationships', default=1, verbose_name='site', to='sites.Site', on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ('created',),
@@ -51,13 +51,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='relationship',
             name='status',
-            field=models.ForeignKey(verbose_name='status', to='relationships.RelationshipStatus'),
+            field=models.ForeignKey(verbose_name='status', to='relationships.RelationshipStatus', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='relationship',
             name='to_user',
-            field=models.ForeignKey(related_name='to_users', verbose_name='to user', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(related_name='to_users', verbose_name='to user', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
