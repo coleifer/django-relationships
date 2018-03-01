@@ -1,5 +1,5 @@
 from django import template
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 try:
     from django.db.models.loading import get_model
 except ImportError:
