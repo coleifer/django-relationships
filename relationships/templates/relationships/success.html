@@ -4,5 +4,5 @@
 {% block content %}
   <h1>{% trans "Success" %}</h1>
   <p>{% trans "You are " %}{% if add %}{% trans "now" %}{% else %}{% trans "no longer" %}{% endif %} {{ status.from_slug }} {{ to_user.username }}</p>
-  <p><a href="{{ to_user.get_absolute_url }}">{% blocktrans with to_user.username as to_user_username %}{{ to_user_username }}'s profile{% endblocktrans %}</a></p>
+  <p>{% blocktrans with username=to_user.username url=to_user.get_absolute_url %}<a href="{{ url }}">Do you want going to {{ username }}'s profile{% endblocktrans %}</a></p>
 {% endblock %}
