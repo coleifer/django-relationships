@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User as DefaultUserModel
 
 from .compat import User
 from .forms import RelationshipStatusAdminForm
@@ -13,13 +14,22 @@ class RelationshipInline(admin.TabularInline):
     fk_name = 'from_user'
 
 
-class UserRelationshipAdmin(UserAdmin):
+class UserRelationshipAdminMixin(object):
     inlines = (RelationshipInline,)
 
 
 class RelationshipStatusAdmin(admin.ModelAdmin):
     form = RelationshipStatusAdminForm
 
-admin.site.unregister(User)
-admin.site.register(User, UserRelationshipAdmin)
+
+if User == DefaultUserModel:
+    class UserRelationshipAdmin(UserRelationshipAdminMixin, UserAdmin):
+        pass
+
+    try:
+        admin.site.unregister(User)
+    except admin.sites.NotRegistered:
+        pass
+    admin.site.register(User, UserRelationshipAdmin)
+
 admin.site.register(RelationshipStatus, RelationshipStatusAdmin)

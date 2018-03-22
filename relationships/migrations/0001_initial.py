@@ -1,102 +1,67 @@
-from south.db import db
-from relationships.models import *
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
+from django.db import models, migrations
+from django.conf import settings
 
 
-class Migration:
+class Migration(migrations.Migration):
 
-    def forwards(self, orm):
+    dependencies = [
+        ('sites', '0001_initial'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
 
-        # Adding model 'RelationshipStatus'
-        db.create_table('relationships_relationshipstatus', (
-            ('id', orm['relationships.RelationshipStatus:id']),
-            ('name', orm['relationships.RelationshipStatus:name']),
-            ('verb', orm['relationships.RelationshipStatus:verb']),
-            ('from_slug', orm['relationships.RelationshipStatus:from_slug']),
-            ('to_slug', orm['relationships.RelationshipStatus:to_slug']),
-            ('symmetrical_slug', orm['relationships.RelationshipStatus:symmetrical_slug']),
-            ('login_required', orm['relationships.RelationshipStatus:login_required']),
-            ('private', orm['relationships.RelationshipStatus:private']),
-        ))
-        db.send_create_signal('relationships', ['RelationshipStatus'])
-
-        # Adding model 'Relationship'
-        db.create_table('relationships_relationship', (
-            ('id', orm['relationships.Relationship:id']),
-            ('from_user', orm['relationships.Relationship:from_user']),
-            ('to_user', orm['relationships.Relationship:to_user']),
-            ('status', orm['relationships.Relationship:status']),
-            ('created', orm['relationships.Relationship:created']),
-        ))
-        db.send_create_signal('relationships', ['Relationship'])
-
-        # Creating unique_together for [from_user, to_user, status] on Relationship.
-        db.create_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id'])
-
-    def backwards(self, orm):
-
-        # Deleting unique_together for [from_user, to_user, status] on Relationship.
-        db.delete_unique('relationships_relationship', ['from_user_id', 'to_user_id', 'status_id'])
-
-        # Deleting model 'RelationshipStatus'
-        db.delete_table('relationships_relationshipstatus')
-
-        # Deleting model 'Relationship'
-        db.delete_table('relationships_relationship')
-
-    models = {
-        'auth.group': {
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '80'}),
-            'permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Permission']", 'blank': 'True'})
-        },
-        'auth.permission': {
-            'Meta': {'unique_together': "(('content_type', 'codename'),)"},
-            'codename': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
-        },
-        'auth.user': {
-            'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
-            'email': ('django.db.models.fields.EmailField', [], {'max_length': '75', 'blank': 'True'}),
-            'first_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
-            'groups': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Group']", 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'is_active': ('django.db.models.fields.BooleanField', [], {'default': 'True', 'blank': 'True'}),
-            'is_staff': ('django.db.models.fields.BooleanField', [], {'default': 'False', 'blank': 'True'}),
-            'is_superuser': ('django.db.models.fields.BooleanField', [], {'default': 'False', 'blank': 'True'}),
-            'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
-            'last_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
-            'password': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
-            'relationships': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.User']", 'symmetrical': 'False'}),
-            'user_permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Permission']", 'blank': 'True'}),
-            'username': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '30'})
-        },
-        'contenttypes.contenttype': {
-            'Meta': {'unique_together': "(('app_label', 'model'),)", 'db_table': "'django_content_type'"},
-            'app_label': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
-        },
-        'relationships.relationship': {
-            'Meta': {'unique_together': "(('from_user', 'to_user', 'status'),)"},
-            'created': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'from_user': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'from_users'", 'to': "orm['auth.User']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['relationships.RelationshipStatus']"}),
-            'to_user': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'to_users'", 'to': "orm['auth.User']"})
-        },
-        'relationships.relationshipstatus': {
-            'from_slug': ('django.db.models.fields.SlugField', [], {'unique': 'True', 'max_length': '50', 'db_index': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'login_required': ('django.db.models.fields.BooleanField', [], {'default': 'False', 'blank': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'private': ('django.db.models.fields.BooleanField', [], {'default': 'False', 'blank': 'True'}),
-            'symmetrical_slug': ('django.db.models.fields.SlugField', [], {'unique': 'True', 'max_length': '50', 'db_index': 'True'}),
-            'to_slug': ('django.db.models.fields.SlugField', [], {'unique': 'True', 'max_length': '50', 'db_index': 'True'}),
-            'verb': ('django.db.models.fields.CharField', [], {'max_length': '100'})
-        }
-    }
-
-    complete_apps = ['relationships']
+    operations = [
+        migrations.CreateModel(
+            name='Relationship',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('created', models.DateTimeField(auto_now_add=True, verbose_name='created')),
+                ('weight', models.FloatField(default=1.0, null=True, verbose_name='weight', blank=True)),
+                ('from_user', models.ForeignKey(related_name='from_users', verbose_name='from user', to=settings.AUTH_USER_MODEL)),
+                ('site', models.ForeignKey(related_name='relationships', default=1, verbose_name='site', to='sites.Site')),
+            ],
+            options={
+                'ordering': ('created',),
+                'verbose_name': 'Relationship',
+                'verbose_name_plural': 'Relationships',
+            },
+            bases=(models.Model,),
+        ),
+        migrations.CreateModel(
+            name='RelationshipStatus',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('name', models.CharField(max_length=100, verbose_name='name')),
+                ('verb', models.CharField(max_length=100, verbose_name='verb')),
+                ('from_slug', models.CharField(help_text="Denote the relationship from the user, i.e. 'following'", max_length=100, verbose_name='from slug')),
+                ('to_slug', models.CharField(help_text="Denote the relationship to the user, i.e. 'followers'", max_length=100, verbose_name='to slug')),
+                ('symmetrical_slug', models.CharField(help_text="When a mutual relationship exists, i.e. 'friends'", max_length=100, verbose_name='symmetrical slug')),
+                ('login_required', models.BooleanField(default=False, help_text='Users must be logged in to see these relationships', verbose_name='login required')),
+                ('private', models.BooleanField(default=False, help_text='Only the user who owns these relationships can see them', verbose_name='private')),
+            ],
+            options={
+                'ordering': ('name',),
+                'verbose_name': 'Relationship status',
+                'verbose_name_plural': 'Relationship statuses',
+            },
+            bases=(models.Model,),
+        ),
+        migrations.AddField(
+            model_name='relationship',
+            name='status',
+            field=models.ForeignKey(verbose_name='status', to='relationships.RelationshipStatus'),
+            preserve_default=True,
+        ),
+        migrations.AddField(
+            model_name='relationship',
+            name='to_user',
+            field=models.ForeignKey(related_name='to_users', verbose_name='to user', to=settings.AUTH_USER_MODEL),
+            preserve_default=True,
+        ),
+        migrations.AlterUniqueTogether(
+            name='relationship',
+            unique_together=set([('from_user', 'to_user', 'status', 'site')]),
+        ),
+    ]

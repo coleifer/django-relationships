@@ -2,7 +2,12 @@ import django
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.db import models, connection
-from django.db.models.fields.related import create_many_related_manager, ManyToManyRel
+from django.db.models.fields.related import ManyToManyRel
+try:
+    from django.db.models.fields.related import create_many_related_manager
+except ImportError:
+    from django.db.models.fields.related_descriptors import\
+    create_forward_many_to_many_manager as create_many_related_manager
 from django.utils.translation import ugettext_lazy as _
 
 from .compat import User
@@ -15,6 +20,9 @@ class RelationshipStatusManager(models.Manager):
 
     def blocking(self):
         return self.get(from_slug='blocking')
+
+    def blocked(self):
+        return self.get(from_slug='blocked')
 
     def by_slug(self, status_slug):
         return self.get(
@@ -50,12 +58,13 @@ class RelationshipStatus(models.Model):
 
 
 class Relationship(models.Model):
-    from_user = models.ForeignKey(User,
+    from_user = models.ForeignKey(settings.AUTH_USER_MODEL,
         related_name='from_users', verbose_name=_('from user'))
-    to_user = models.ForeignKey(User,
+    to_user = models.ForeignKey(settings.AUTH_USER_MODEL,
         related_name='to_users', verbose_name=_('to user'))
     status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'))
     created = models.DateTimeField(_('created'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated_at'), auto_now=True)
     weight = models.FloatField(_('weight'), default=1.0, blank=True, null=True)
     site = models.ForeignKey(Site, default=settings.SITE_ID,
         verbose_name=_('site'), related_name='relationships')
@@ -108,6 +117,33 @@ class RelationshipManager(User._default_manager.__class__):
             return (relationship, user.relationships.add(self.instance, status, False))
         else:
             return relationship
+
+    def get_relationship_obj(self, user, status=None, symmetrical=False):
+        if not status:
+            status = RelationshipStatus.objects.following()
+
+        relationship = Relationship.objects.get(
+            from_user=self.instance,
+            to_user=user,
+            status=status,
+            site=Site.objects.get_current()
+        )
+
+        if symmetrical:
+            return (relationship, user.relationships.get_relationship_obj(self.instance, status, False))
+        else:
+            return relationship
+
+    def filter_relationships(self, status=None):
+        if not status:
+            status = RelationshipStatus.objects.following()
+
+        return Relationship.objects.filter(
+            from_user=self.instance,
+            status=status,
+            site=Site.objects.get_current()
+        )
+
 
     def remove(self, user, status=None, symmetrical=False):
         """
@@ -264,9 +300,10 @@ elif django.VERSION > (1, 2) and django.VERSION < (1, 4):
 else:
 
     fake_rel = ManyToManyRel(
+        field=None,
         to=User,
         through=Relationship)
-
+    from .compat import create_many_related_manager
     RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
 
     class RelationshipsDescriptor(object):
@@ -281,7 +318,3 @@ else:
                 through=Relationship,
             )
             return manager
-
-#HACK
-field.contribute_to_class(User, 'relationships')
-setattr(User, 'relationships', RelationshipsDescriptor())

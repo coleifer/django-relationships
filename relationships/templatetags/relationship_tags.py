@@ -1,6 +1,10 @@
 from django import template
 from django.core.urlresolvers import reverse
-from django.db.models.loading import get_model
+try:
+    from django.db.models.loading import get_model
+except ImportError:
+    from django.apps import apps
+    get_model = apps.get_model
 from django.template import TemplateSyntaxError
 from django.utils.functional import wraps
 from relationships.models import RelationshipStatus
