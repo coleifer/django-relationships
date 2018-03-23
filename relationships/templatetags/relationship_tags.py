@@ -1,28 +1,37 @@
 from django import template
 from django.urls import reverse
+
 try:
     from django.db.models.loading import get_model
 except ImportError:
     from django.apps import apps
     get_model = apps.get_model
+
 from django.template import TemplateSyntaxError
 from django.utils.functional import wraps
+from django.utils.translation import ugettext as _
+
 from relationships.models import RelationshipStatus
-from relationships.utils import positive_filter, negative_filter
+from relationships.utils import (
+    positive_filter,
+    negative_filter
+)
 
 register = template.Library()
 
 
 class IfRelationshipNode(template.Node):
-    def __init__(self, nodelist_true, nodelist_false, *args):
+    def __init__(self, nodelist_true, nodelist_false, from_user, to_user, *args):
         self.nodelist_true = nodelist_true
         self.nodelist_false = nodelist_false
-        self.from_user, self.to_user, self.status = args
+        self.from_user = template.Variable(from_user)
+        self.to_user = template.Variable(to_user)
+        self.status = args[0]
         self.status = self.status.replace('"', '')  # strip quotes
 
     def render(self, context):
-        from_user = template.resolve_variable(self.from_user, context)
-        to_user = template.resolve_variable(self.to_user, context)
+        from_user = self.from_user.resolve(context)
+        to_user = self.to_user.resolve(context)
 
         if from_user.is_anonymous() or to_user.is_anonymous():
             return self.nodelist_false.render(context)
@@ -66,7 +75,7 @@ def if_relationship(parser, token):
     """
     bits = list(token.split_contents())
     if len(bits) != 4:
-        raise TemplateSyntaxError("%r takes 3 arguments:\n%s" % (bits[0], if_relationship.__doc__))
+        raise TemplateSyntaxError(_("{0!r} takes 3 arguments:\n{0!s}".format(bits[0], if_relationship.__doc__)))
     end_tag = 'end' + bits[0]
     nodelist_true = parser.parse(('else', end_tag))
     token = parser.next_token()
@@ -120,6 +129,7 @@ def positive_filter_decorator(func):
         if user.is_anonymous():
             return qs.none()
         return func(qs, user)
+
     inner._decorated_function = getattr(func, '_decorated_function', func)
     return wraps(func)(inner)
 
@@ -134,6 +144,7 @@ def negative_filter_decorator(func):
         if user.is_anonymous():
             return qs
         return func(qs, user)
+
     inner._decorated_function = getattr(func, '_decorated_function', func)
     return wraps(func)(inner)
 
