@@ -54,3 +54,10 @@ Installation
 OR
 
 put the ``relationships`` folder on your python-path
+
+
+TODO
+----
+* Make `if_relationship` a function in template instead a `if` alternative
+* Add full patch for `django` 2.0.
+
