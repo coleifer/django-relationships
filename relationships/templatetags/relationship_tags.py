@@ -5,6 +5,7 @@ try:
     from django.db.models.loading import get_model
 except ImportError:
     from django.apps import apps
+
     get_model = apps.get_model
 
 from django.template import TemplateSyntaxError
@@ -20,71 +21,45 @@ from relationships.utils import (
 register = template.Library()
 
 
-class IfRelationshipNode(template.Node):
-    def __init__(self, nodelist_true, nodelist_false, from_user, to_user, *args):
-        self.nodelist_true = nodelist_true
-        self.nodelist_false = nodelist_false
-        self.from_user = template.Variable(from_user)
-        self.to_user = template.Variable(to_user)
-        self.status = args[0]
-        self.status = self.status.replace('"', '')  # strip quotes
-
-    def render(self, context):
-        from_user = self.from_user.resolve(context)
-        to_user = self.to_user.resolve(context)
-
-        if from_user.is_anonymous() or to_user.is_anonymous():
-            return self.nodelist_false.render(context)
-
-        try:
-            status = RelationshipStatus.objects.by_slug(self.status)
-        except RelationshipStatus.DoesNotExist:
-            raise template.TemplateSyntaxError('RelationshipStatus not found')
-
-        if status.from_slug == self.status:
-            val = from_user.relationships.exists(to_user, status)
-        elif status.to_slug == self.status:
-            val = to_user.relationships.exists(from_user, status)
-        else:
-            val = from_user.relationships.exists(to_user, status, symmetrical=True)
-
-        if val:
-            return self.nodelist_true.render(context)
-
-        return self.nodelist_false.render(context)
-
-
-@register.tag
-def if_relationship(parser, token):
+@register.simple_tag
+def relationship(from_user, to_user, status):
     """
     Determine if a certain type of relationship exists between two users.
     The ``status`` parameter must be a slug matching either the from_slug,
     to_slug or symmetrical_slug of a RelationshipStatus.
 
     Example::
-
-        {% if_relationship from_user to_user "friends" %}
+        {% relationship from_user to_user "friends" as felas %}
+        {% relationship from_user to_user "blocking" as blocked %}
+        {% if felas %}
             Here are pictures of me drinking alcohol
+        {% elif blocked %}
+            damn seo experts
         {% else %}
             Sorry coworkers
-        {% endif_relationship %}
-
-        {% if_relationship from_user to_user "blocking" %}
-            damn seo experts
-        {% endif_relationship %}
+        {% endif %}
     """
-    bits = list(token.split_contents())
-    if len(bits) != 4:
-        raise TemplateSyntaxError(_("{0!r} takes 3 arguments:\n{0!s}".format(bits[0], if_relationship.__doc__)))
-    end_tag = 'end' + bits[0]
-    nodelist_true = parser.parse(('else', end_tag))
-    token = parser.next_token()
-    if token.contents == 'else':
-        nodelist_false = parser.parse((end_tag,))
-        parser.delete_first_token()
+    requested_status = status.replace('"', '')  # strip quotes
+
+    if from_user.is_anonymous() or to_user.is_anonymous():
+        return False
+
+    try:
+        status = RelationshipStatus.objects.by_slug(requested_status)
+    except RelationshipStatus.DoesNotExist:
+        raise template.TemplateSyntaxError('RelationshipStatus not found')
+
+    if status.from_slug == requested_status:
+        val = from_user.relationships.exists(to_user, status)
+    elif status.to_slug == requested_status:
+        val = to_user.relationships.exists(from_user, status)
     else:
-        nodelist_false = template.NodeList()
-    return IfRelationshipNode(nodelist_true, nodelist_false, *bits[1:])
+        val = from_user.relationships.exists(to_user, status, symmetrical=True)
+
+    if val:
+        return True
+
+    return False
 
 
 @register.filter
