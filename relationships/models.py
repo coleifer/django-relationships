@@ -240,8 +240,6 @@ class RelationshipManager(User._default_manager.__class__):
             if status:
                 query.update(from_users__status=status)
 
-            print(query)
-
         return User.objects.filter(**query).exists()
 
     # some defaults
