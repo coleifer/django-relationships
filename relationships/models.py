@@ -72,8 +72,8 @@ class Relationship(models.Model):
 
     def __str__(self):
         return _('Relationship from {from_user} to {to_user}').format(
-            from_user=self.from_user.username,
-            to_user=self.to_user.username
+            from_user=self.from_user.get_username(),
+            to_user=self.to_user.get_username()
         )
 
 
