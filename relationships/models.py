@@ -2,10 +2,10 @@ import django
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.db import models, connection
-from django.db.models.fields.related import create_many_related_manager, ManyToManyRel
+from django.db.models.fields.related import ManyToManyRel
 from django.utils.translation import ugettext_lazy as _
 
-from .compat import User
+from relationships.compat import User
 
 
 class RelationshipStatusManager(models.Manager):
@@ -15,6 +15,9 @@ class RelationshipStatusManager(models.Manager):
 
     def blocking(self):
         return self.get(from_slug='blocking')
+
+    def blocked(self):
+        return self.get(from_slug='blocked')
 
     def by_slug(self, status_slug):
         return self.get(
@@ -28,15 +31,15 @@ class RelationshipStatus(models.Model):
     name = models.CharField(_('name'), max_length=100)
     verb = models.CharField(_('verb'), max_length=100)
     from_slug = models.CharField(_('from slug'), max_length=100,
-        help_text=_("Denote the relationship from the user, i.e. 'following'"))
+                                 help_text=_("Denote the relationship from the user, i.e. 'following'"))
     to_slug = models.CharField(_('to slug'), max_length=100,
-        help_text=_("Denote the relationship to the user, i.e. 'followers'"))
+                               help_text=_("Denote the relationship to the user, i.e. 'followers'"))
     symmetrical_slug = models.CharField(_('symmetrical slug'), max_length=100,
-        help_text=_("When a mutual relationship exists, i.e. 'friends'"))
+                                        help_text=_("When a mutual relationship exists, i.e. 'friends'"))
     login_required = models.BooleanField(_('login required'), default=False,
-        help_text=_("Users must be logged in to see these relationships"))
+                                         help_text=_("Users must be logged in to see these relationships"))
     private = models.BooleanField(_('private'), default=False,
-        help_text=_("Only the user who owns these relationships can see them"))
+                                  help_text=_("Only the user who owns these relationships can see them"))
 
     objects = RelationshipStatusManager()
 
@@ -45,20 +48,21 @@ class RelationshipStatus(models.Model):
         verbose_name = _('Relationship status')
         verbose_name_plural = _('Relationship statuses')
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
 class Relationship(models.Model):
-    from_user = models.ForeignKey(User,
-        related_name='from_users', verbose_name=_('from user'))
-    to_user = models.ForeignKey(User,
-        related_name='to_users', verbose_name=_('to user'))
-    status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'))
+    from_user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                  related_name='from_users', verbose_name=_('from user'), on_delete=models.CASCADE)
+    to_user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                related_name='to_users', verbose_name=_('to user'), on_delete=models.CASCADE)
+    status = models.ForeignKey(RelationshipStatus, verbose_name=_('status'), on_delete=models.CASCADE)
     created = models.DateTimeField(_('created'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated_at'), auto_now=True)
     weight = models.FloatField(_('weight'), default=1.0, blank=True, null=True)
     site = models.ForeignKey(Site, default=settings.SITE_ID,
-        verbose_name=_('site'), related_name='relationships')
+                             verbose_name=_('site'), related_name='relationships', on_delete=models.CASCADE)
 
     class Meta:
         unique_together = (('from_user', 'to_user', 'status', 'site'),)
@@ -66,13 +70,19 @@ class Relationship(models.Model):
         verbose_name = _('Relationship')
         verbose_name_plural = _('Relationships')
 
-    def __unicode__(self):
-        return (_('Relationship from %(from_user)s to %(to_user)s')
-                % {'from_user': self.from_user.username,
-                   'to_user': self.to_user.username})
+    def __str__(self):
+        return _('Relationship from {from_user} to {to_user}').format(
+            from_user=self.from_user.get_username(),
+            to_user=self.to_user.get_username()
+        )
 
-field = models.ManyToManyField(User, through=Relationship,
-                               symmetrical=False, related_name='related_to')
+
+field = models.ManyToManyField(
+    User,
+    through=Relationship,
+    symmetrical=False,
+    related_name='related_to'
+)
 
 
 class RelationshipManager(User._default_manager.__class__):
@@ -108,6 +118,32 @@ class RelationshipManager(User._default_manager.__class__):
             return (relationship, user.relationships.add(self.instance, status, False))
         else:
             return relationship
+
+    def get_relationship_obj(self, user, status=None, symmetrical=False):
+        if not status:
+            status = RelationshipStatus.objects.following()
+
+        relationship = Relationship.objects.get(
+            from_user=self.instance,
+            to_user=user,
+            status=status,
+            site=Site.objects.get_current()
+        )
+
+        if symmetrical:
+            return (relationship, user.relationships.get_relationship_obj(self.instance, status, False))
+        else:
+            return relationship
+
+    def filter_relationships(self, status=None):
+        if not status:
+            status = RelationshipStatus.objects.following()
+
+        return Relationship.objects.filter(
+            from_user=self.instance,
+            status=status,
+            site=Site.objects.get_current()
+        )
 
     def remove(self, user, status=None, symmetrical=False):
         """
@@ -223,65 +259,26 @@ class RelationshipManager(User._default_manager.__class__):
         return self.get_relationships(RelationshipStatus.objects.following(), True)
 
 
-if django.VERSION < (1, 2):
+fake_rel = ManyToManyRel(
+    field=None,
+    to=User,
+    through=Relationship
+)
 
-    RelatedManager = create_many_related_manager(RelationshipManager, Relationship)
+from relationships.compat import create_many_related_manager
 
-    class RelationshipsDescriptor(object):
-        def __get__(self, instance, instance_type=None):
-            qn = connection.ops.quote_name
-            manager = RelatedManager(
-                model=User,
-                core_filters={'related_to__pk': instance._get_pk_val()},
-                instance=instance,
-                symmetrical=False,
-                join_table=qn('relationships_relationship'),
-                source_col_name=qn('from_user_id'),
-                target_col_name=qn('to_user_id'),
-            )
-            return manager
+RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
 
-elif django.VERSION > (1, 2) and django.VERSION < (1, 4):
 
-    fake_rel = ManyToManyRel(
-        to=User,
-        through=Relationship)
-
-    RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
-
-    class RelationshipsDescriptor(object):
-        def __get__(self, instance, instance_type=None):
-            manager = RelatedManager(
-                model=User,
-                core_filters={'related_to__pk': instance._get_pk_val()},
-                instance=instance,
-                symmetrical=False,
-                source_field_name='from_user',
-                target_field_name='to_user'
-            )
-            return manager
-
-else:
-
-    fake_rel = ManyToManyRel(
-        to=User,
-        through=Relationship)
-
-    RelatedManager = create_many_related_manager(RelationshipManager, fake_rel)
-
-    class RelationshipsDescriptor(object):
-        def __get__(self, instance, instance_type=None):
-            manager = RelatedManager(
-                model=User,
-                query_field_name='related_to',
-                instance=instance,
-                symmetrical=False,
-                source_field_name='from_user',
-                target_field_name='to_user',
-                through=Relationship,
-            )
-            return manager
-
-#HACK
-field.contribute_to_class(User, 'relationships')
-setattr(User, 'relationships', RelationshipsDescriptor())
+class RelationshipsDescriptor(object):
+    def __get__(self, instance, instance_type=None):
+        manager = RelatedManager(
+            model=User,
+            query_field_name='related_to',
+            instance=instance,
+            symmetrical=False,
+            source_field_name='from_user',
+            target_field_name='to_user',
+            through=Relationship,
+        )
+        return manager

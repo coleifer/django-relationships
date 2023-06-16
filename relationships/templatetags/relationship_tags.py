@@ -1,77 +1,65 @@
 from django import template
-from django.core.urlresolvers import reverse
-from django.db.models.loading import get_model
+from django.urls import reverse
+
+try:
+    from django.db.models.loading import get_model
+except ImportError:
+    from django.apps import apps
+
+    get_model = apps.get_model
+
 from django.template import TemplateSyntaxError
 from django.utils.functional import wraps
+from django.utils.translation import ugettext as _
+
 from relationships.models import RelationshipStatus
-from relationships.utils import positive_filter, negative_filter
+from relationships.utils import (
+    positive_filter,
+    negative_filter
+)
 
 register = template.Library()
 
 
-class IfRelationshipNode(template.Node):
-    def __init__(self, nodelist_true, nodelist_false, *args):
-        self.nodelist_true = nodelist_true
-        self.nodelist_false = nodelist_false
-        self.from_user, self.to_user, self.status = args
-        self.status = self.status.replace('"', '')  # strip quotes
-
-    def render(self, context):
-        from_user = template.resolve_variable(self.from_user, context)
-        to_user = template.resolve_variable(self.to_user, context)
-
-        if from_user.is_anonymous() or to_user.is_anonymous():
-            return self.nodelist_false.render(context)
-
-        try:
-            status = RelationshipStatus.objects.by_slug(self.status)
-        except RelationshipStatus.DoesNotExist:
-            raise template.TemplateSyntaxError('RelationshipStatus not found')
-
-        if status.from_slug == self.status:
-            val = from_user.relationships.exists(to_user, status)
-        elif status.to_slug == self.status:
-            val = to_user.relationships.exists(from_user, status)
-        else:
-            val = from_user.relationships.exists(to_user, status, symmetrical=True)
-
-        if val:
-            return self.nodelist_true.render(context)
-
-        return self.nodelist_false.render(context)
-
-
-@register.tag
-def if_relationship(parser, token):
+@register.simple_tag
+def relationship(from_user, to_user, status):
     """
     Determine if a certain type of relationship exists between two users.
     The ``status`` parameter must be a slug matching either the from_slug,
     to_slug or symmetrical_slug of a RelationshipStatus.
 
     Example::
-
-        {% if_relationship from_user to_user "friends" %}
+        {% relationship from_user to_user "friends" as felas %}
+        {% relationship from_user to_user "blocking" as blocked %}
+        {% if felas %}
             Here are pictures of me drinking alcohol
+        {% elif blocked %}
+            damn seo experts
         {% else %}
             Sorry coworkers
-        {% endif_relationship %}
-
-        {% if_relationship from_user to_user "blocking" %}
-            damn seo experts
-        {% endif_relationship %}
+        {% endif %}
     """
-    bits = list(token.split_contents())
-    if len(bits) != 4:
-        raise TemplateSyntaxError("%r takes 3 arguments:\n%s" % (bits[0], if_relationship.__doc__))
-    end_tag = 'end' + bits[0]
-    nodelist_true = parser.parse(('else', end_tag))
-    token = parser.next_token()
-    if token.contents == 'else':
-        nodelist_false = parser.parse((end_tag,))
-        parser.delete_first_token()
+    requested_status = status.replace('"', '')  # strip quotes
+
+    if from_user.is_anonymous() or to_user.is_anonymous():
+        return False
+
+    try:
+        status = RelationshipStatus.objects.by_slug(requested_status)
+    except RelationshipStatus.DoesNotExist:
+        raise template.TemplateSyntaxError('RelationshipStatus not found')
+
+    if status.from_slug == requested_status:
+        val = from_user.relationships.exists(to_user, status)
+    elif status.to_slug == requested_status:
+        val = to_user.relationships.exists(from_user, status)
     else:
-        nodelist_false = template.NodeList()
-    return IfRelationshipNode(nodelist_true, nodelist_false, *bits[1:])
+        val = from_user.relationships.exists(to_user, status, symmetrical=True)
+
+    if val:
+        return True
+
+    return False
 
 
 @register.filter
@@ -116,6 +104,7 @@ def positive_filter_decorator(func):
         if user.is_anonymous():
             return qs.none()
         return func(qs, user)
+
     inner._decorated_function = getattr(func, '_decorated_function', func)
     return wraps(func)(inner)
 
@@ -130,6 +119,7 @@ def negative_filter_decorator(func):
         if user.is_anonymous():
             return qs
         return func(qs, user)
+
     inner._decorated_function = getattr(func, '_decorated_function', func)
     return wraps(func)(inner)
 
